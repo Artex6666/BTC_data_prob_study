@@ -752,13 +752,13 @@ async function collectData() {
             const downBuyPrice = priceMap[`${downTokenId}-BUY`] ?? null;
             const downSellPrice = priceMap[`${downTokenId}-SELL`] ?? null;
 
-            if (upBuyPrice !== null && downSellPrice !== null) {
+            if (upSellPrice !== null && downSellPrice !== null) {
                 const spreadUp = (upSellPrice !== null && upBuyPrice !== null)
                     ? (upSellPrice - upBuyPrice) : null;
                 const spreadDown = (downSellPrice !== null && downBuyPrice !== null) 
                     ? (downSellPrice - downBuyPrice) : null;
                 
-                row[`${tf}_buy`] = upBuyPrice.toFixed(2);
+                row[`${tf}_buy`] = upSellPrice.toFixed(2);
                 row[`${tf}_sell`] = downSellPrice.toFixed(2);
                 row[`${tf}_spread_up`] = spreadUp !== null ? spreadUp.toFixed(2) : '';
                 row[`${tf}_spread_down`] = spreadDown !== null ? spreadDown.toFixed(2) : '';

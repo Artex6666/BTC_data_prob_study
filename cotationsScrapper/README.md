@@ -67,8 +67,9 @@ const DATA_DIR = path.join(__dirname, '..', 'data'); // Dossier de sortie
 - Prix spot depuis Binance (`GET https://api.binance.com/api/v3/ticker/price`)
 - Cotations Polymarket CLOB (`GET https://clob.polymarket.com/price`)
 - Cotations pour les tokens Up et Down
-- **Spread** = Down.sell - Down.buy (différence côté token Down)
-- **Buy/Sell** = prix du token Up (cotation principale)
+- **Spread** = Up.sell - Up.buy (différence côté token Up) et Down.sell - Down.buy (différence côté token Down)
+- **Buy** = Up SELL (prix pour vendre Up)
+- **Sell** = Down SELL (prix pour vendre Down)
 
 ### 3. Écriture CSV (60 secondes)
 - Écriture de toutes les lignes collectées
