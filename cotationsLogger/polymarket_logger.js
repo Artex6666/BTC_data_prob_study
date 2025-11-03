@@ -4,7 +4,7 @@ const path = require('path');
 const colors = require('colors');
 
 // Configuration
-const ASSETS = ['BTC', 'ETH', 'SOL', 'XRP'];
+const ASSETS = ['BTC', 'ETH', 'SOL'];
 const TIMEFRAMES = ['m15', 'h1', 'daily'];
 const DATA_DIR = path.join(__dirname, '..', 'data');
 
@@ -292,7 +292,7 @@ function generateExpectedSlug(asset, timeframe, now = new Date()) {
     });
     
     const nowParts = etFmt.formatToParts(now);
-    const get = (parts, type) => parseInt(parts.find(p => p.type === type).value);
+    const get = (parts, type) => parseInt(parts.find(p => p.type === type)?.value || 0);
     const nowY = get(nowParts, 'year');
     const nowMo = get(nowParts, 'month');
     const nowD = get(nowParts, 'day');
@@ -451,7 +451,6 @@ async function refreshMarkets() {
             newMarkets[asset] = { m15: null, h1: null, daily: null };
         });
 
-        let parsedCount = 0;
         let activeCount = 0;
         let clobCount = 0;
 
@@ -467,7 +466,9 @@ async function refreshMarkets() {
             else if (slug.startsWith('xrp-')) asset = 'XRP';
             else continue;
             
-            parsedCount++;
+            // Ignorer si l'asset n'est pas dans ASSETS
+            if (!ASSETS.includes(asset)) continue;
+            
 
             // Déterminer timeframe via série si disponible
             let tfHint = null;
@@ -849,7 +850,7 @@ async function main() {
     console.log(colors.red('Polymarket Price Logger démarré\n'));
     
     // Assets avec couleurs
-    const coloredAssets = ASSETS.map(asset => ASSET_COLORS[asset](asset)).join(', ');
+    const coloredAssets = ASSETS.map(asset => (ASSET_COLORS[asset] || colors.white)(asset)).join(', ');
     console.log(`${colors.bold('Assets:')} ${coloredAssets}`);
     console.log(`${colors.bold('Timeframes:')} ${colors.cyan(TIMEFRAMES.join(', '))}`);
     console.log(`${colors.bold('Dossier de sortie:')} ${colors.yellow(DATA_DIR)}`);
