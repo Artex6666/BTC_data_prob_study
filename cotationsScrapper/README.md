@@ -57,15 +57,18 @@ const DATA_DIR = path.join(__dirname, '..', 'data'); // Dossier de sortie
 ## 🧠 Fonctionnement
 
 ### 1. Refresh des marchés (10 minutes)
-- Appel à `GET https://gamma-api.polymarket.com/markets?limit=1000&closed=false`
-- Filtrage des marchés updown pour chaque asset/timeframe
+- Appel à `GET https://gamma-api.polymarket.com/events?closed=false&limit=100`
+- Filtrage des événements updown pour chaque asset/timeframe
 - Validation que le marché correspond à la bougie active (timezone ET)
-- Mise à jour des `clobTokenIds`
+- Mise à jour des `clobTokenIds` depuis `event.markets[].clobTokenIds`
+- Fallback : récupération par slug pour les marchés manquants via `/events/slug/{slug}`
 
 ### 2. Collecte des données (1 seconde)
 - Prix spot depuis Binance (`GET https://api.binance.com/api/v3/ticker/price`)
 - Cotations Polymarket CLOB (`GET https://clob.polymarket.com/price`)
-- Calcul du spread = sell - buy
+- Cotations pour les tokens Up et Down
+- **Spread** = Down.sell - Down.buy (différence côté token Down)
+- **Buy/Sell** = prix du token Up (cotation principale)
 
 ### 3. Écriture CSV (60 secondes)
 - Écriture de toutes les lignes collectées
@@ -73,12 +76,21 @@ const DATA_DIR = path.join(__dirname, '..', 'data'); // Dossier de sortie
 
 ## 🔍 Validation des bougies actives
 
-Le script vérifie que chaque pari utilisé correspond bien au prix spot enregistré :
+Le script vérifie **doublement** que chaque pari utilisé correspond bien au prix spot enregistré :
 
-1. **Parsing du slug** : Extraction de la date/heure de chaque marché depuis son slug
-2. **Calcul de la bougie active** : Détermine la prochaine bougie (m15/h1/daily) en timezone ET
-3. **Matching** : Compare le slug du marché avec la bougie active
-4. **Title verification** : Log du title pour traçabilité
+1. **Au refresh** (toutes les 10 minutes) : Filtrage initial des marchés pour ne garder que les bougies actives
+2. **À la collecte** (chaque seconde) : Re-vérification que le marché est toujours actif avant de stocker les données
+
+### Parsing des slugs
+- **m15** : Format Unix timestamp `btc-updown-15m-1762120800`
+- **h1** : Format texte `bitcoin-up-or-down-november-2-3pm-et`
+- **daily** : Format texte `xrp-up-or-down-november-2-11pm-et`
+
+### Calcul de la bougie active
+- Timezone **ET (America/New_York)** avec gestion DST automatique
+- **m15** : Prochaine bougie (00, 15, 30, 45 minutes)
+- **h1** : Prochaine heure
+- **daily** : 23:00 ET du jour actuel ou suivant
 
 Exemple de title : `"Solana Up or Down - November 2, 1:30PM-1:45PM ET"`
 
