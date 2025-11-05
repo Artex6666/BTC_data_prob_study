@@ -70,8 +70,36 @@ function parseSlug(slug, asset, timeframeOverride = null) {
         else return null;
         
         // Le timestamp Unix représente le début de la bougie en ET
-        // Convertir en Date (JS attend milliseconds)
-        const timestamp = new Date(unixTimestamp * 1000);
+        // Le timestamp Unix est généré en convertissant une date ET en timestamp
+        // Donc on doit le convertir en UTC d'abord, puis extraire les composants ET
+        const timestampUTC = new Date(unixTimestamp * 1000);
+        
+        // Le timestamp Unix représente un instant UTC, mais il a été créé à partir d'une date ET
+        // Pour retrouver l'heure ET originale, on doit convertir cette date UTC en ET
+        const etFmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+        });
+        const etParts = etFmt.formatToParts(timestampUTC);
+        const get = (parts, type) => parseInt(parts.find(p => p.type === type)?.value || 0);
+        const etYear = get(etParts, 'year');
+        const etMonth = get(etParts, 'month');
+        const etDay = get(etParts, 'day');
+        const etHour = get(etParts, 'hour');
+        const etMinute = get(etParts, 'minute');
+        
+        // Créer une date ISO en ET avec ces composants
+        // Pour déterminer EST/EDT, on utilise une date de test
+        const testDate = new Date(Date.UTC(etYear, etMonth - 1, etDay, etHour, etMinute, 0, 0));
+        const tzParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
+            .formatToParts(testDate);
+        const tzName = tzParts.find(p => p.type === 'timeZoneName')?.value || 'EST';
+        const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
+        
+        // Construire une date ISO en ET avec ces composants
+        const iso = `${etYear}-${String(etMonth).padStart(2,'0')}-${String(etDay).padStart(2,'0')}T${String(etHour).padStart(2,'0')}:${String(etMinute).padStart(2,'0')}:00${offset}`;
+        const timestamp = new Date(iso);
         
         // Retourner le début de la bougie (pas la fin)
         return { timeframe, timestamp };
@@ -92,19 +120,34 @@ function parseSlug(slug, asset, timeframeOverride = null) {
         const monthNum = MONTHS[monthName.toLowerCase()];
         if (!monthNum) return null;
 
-        // Déterminer l'année (si la date est déjà passée cette année en ET, prendre l'année suivante)
+        // Déterminer l'année en comparant avec maintenant en ET
         const now = new Date();
-        const nowStr = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
-        const nowParts = nowStr.match(/(\d+)\/(\d+)\/(\d+), (\d+):(\d+):(\d+)/);
-        if (!nowParts) return null;
-        let year = parseInt(nowParts[3]);
+        const etFmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false
+        });
+        const nowParts = etFmt.formatToParts(now);
+        const get = (parts, type) => parseInt(parts.find(p => p.type === type)?.value || 0);
+        const nowY = get(nowParts, 'year');
+        const nowMo = get(nowParts, 'month');
+        const nowD = get(nowParts, 'day');
         
-        // Comparer la date candidat avec now (en ET)
-        const candidateET = new Date(year, monthNum - 1, dayNum, 0, 0, 0, 0);
-        const nowET = new Date(parseInt(nowParts[3]), parseInt(nowParts[1]) - 1, parseInt(nowParts[2]), 
-                                parseInt(nowParts[4]), parseInt(nowParts[5]), parseInt(nowParts[6]));
-        if (candidateET < nowET) {
-            year += 1;
+        let year = nowY;
+        
+        // Comparer la date candidat avec maintenant (en ET)
+        // Si le mois/jour est dans le passé, prendre l'année suivante
+        // Mais si c'est le même jour, c'est le marché actuel (les daily se mettent à jour à 12pm ET)
+        if (monthNum < nowMo || 
+            (monthNum === nowMo && dayNum < nowD)) {
+            // La date est dans le passé, prendre l'année suivante
+            year = nowY + 1;
+        } else if (monthNum === nowMo && dayNum === nowD) {
+            // Même jour : c'est le marché actuel
+            year = nowY;
+        } else {
+            // Date future cette année
+            year = nowY;
         }
 
         // Construire une Date pour le début de la journée en ET
@@ -138,19 +181,35 @@ function parseSlug(slug, asset, timeframeOverride = null) {
         if (ampm === 'pm' && hourNum < 12) hourNum += 12;
         if (ampm === 'am' && hourNum === 12) hourNum = 0;
 
-        // Déterminer l'année (si la date est déjà passée cette année en ET, prendre l'année suivante)
+        // Déterminer l'année en comparant avec maintenant en ET
         const now = new Date();
-        const nowStr = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
-        const nowParts = nowStr.match(/(\d+)\/(\d+)\/(\d+), (\d+):(\d+):(\d+)/);
-        if (!nowParts) return null;
-        let year = parseInt(nowParts[3]);
+        const etFmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false
+        });
+        const nowParts = etFmt.formatToParts(now);
+        const get = (parts, type) => parseInt(parts.find(p => p.type === type)?.value || 0);
+        const nowY = get(nowParts, 'year');
+        const nowMo = get(nowParts, 'month');
+        const nowD = get(nowParts, 'day');
+        const nowH = get(nowParts, 'hour');
         
-        // Comparer la date candidat avec now (en ET)
-        const candidateET = new Date(year, monthNum - 1, dayNum, hourNum, 0, 0, 0);
-        const nowET = new Date(parseInt(nowParts[3]), parseInt(nowParts[1]) - 1, parseInt(nowParts[2]), 
-                                parseInt(nowParts[4]), parseInt(nowParts[5]), parseInt(nowParts[6]));
-        if (candidateET < nowET) {
-            year += 1;
+        let year = nowY;
+        
+        // Comparer la date candidat avec maintenant (en ET)
+        // Pour h1, un marché est actif toute l'heure (ex: 11am est actif de 11:00 à 11:59)
+        // Donc si c'est le même jour et la même heure, ou même si on est un peu après dans la même heure, c'est le marché actuel
+        if (monthNum < nowMo || 
+            (monthNum === nowMo && dayNum < nowD)) {
+            // La date est dans le passé (mois ou jour différent), prendre l'année suivante
+            year = nowY + 1;
+        } else if (monthNum === nowMo && dayNum === nowD) {
+            // Même jour : c'est le marché actuel (même si l'heure est passée, c'est toujours dans la même heure de trading)
+            year = nowY;
+        } else {
+            // Date future cette année
+            year = nowY;
         }
 
         // Construire une Date avec offset ET correct (DST)
@@ -303,14 +362,10 @@ function generateExpectedSlug(asset, timeframe, now = new Date()) {
     let targetY = nowY, targetMo = nowMo, targetD = nowD, targetH = nowH, targetMi = nowMi;
     
     if (timeframe === 'm15') {
-        targetMi = Math.ceil(nowMi / 15) * 15;
-        if (targetMi === 60) {
-            targetMi = 0;
-            targetH = (nowH + 1) % 24;
-            if (targetH === 0) {
-                targetD++;
-            }
-        }
+        // Pour m15, on prend la bougie actuelle (celle qui a commencé)
+        // Ex: à 11:47, la bougie actuelle est celle qui a commencé à 11:45
+        targetMi = Math.floor(nowMi / 15) * 15;
+        // Pas besoin de gérer le cas targetMi === 60 car Math.floor garantit 0, 15, 30, ou 45
     } else if (timeframe === 'h1') {
         // Pas de décalage : on reste sur l'heure actuelle
         targetH = nowH;
@@ -342,7 +397,21 @@ function generateExpectedSlug(asset, timeframe, now = new Date()) {
     
     if (timeframe === 'm15') {
         // Format: btc-updown-15m-1762120800 (timestamp Unix)
-        const unixTs = Math.floor(Date.UTC(targetY, targetMo - 1, targetD, targetH, targetMi, 0) / 1000);
+        // Le timestamp Unix doit représenter l'heure ET, pas UTC
+        // On crée une date en ET avec l'offset approprié, puis on la convertit en timestamp Unix
+        // Pour déterminer EST/EDT, on utilise une date de test
+        const testDate = new Date(Date.UTC(targetY, targetMo - 1, targetD, targetH, targetMi, 0, 0));
+        const tzParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
+            .formatToParts(testDate);
+        const tzName = tzParts.find(p => p.type === 'timeZoneName')?.value || 'EST';
+        const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
+        
+        // Créer une date ISO en ET
+        const iso = `${targetY}-${String(targetMo).padStart(2,'0')}-${String(targetD).padStart(2,'0')}T${String(targetH).padStart(2,'0')}:${String(targetMi).padStart(2,'0')}:00${offset}`;
+        const dateET = new Date(iso);
+        
+        // Convertir en timestamp Unix (en secondes)
+        const unixTs = Math.floor(dateET.getTime() / 1000);
         return `${assetStr}-updown-15m-${unixTs}`;
     } else if (timeframe === 'h1') {
         // Format: bitcoin-up-or-down-november-2-3pm-et
@@ -399,8 +468,18 @@ function isActiveMarket(parsed, asset, timeframe, now = new Date()) {
     if (timeframe === 'm15') {
         // Pour m15, vérifier que now est dans les 15 minutes de la bougie
         // Ex: bougie 14:00 -> valide de 14:00 à 14:14
+        // Ex: bougie 12:45 -> valide de 12:45 à 12:59
         matches = nowY === mY && nowMo === mMo && nowD === mD && nowH === mH && 
                   nowMi >= mMi && nowMi < mMi + 15;
+        
+        if (DEBUG_MODE && !matches && parsed) {
+            // Log pour debug si le marché n'est pas actif
+            const colorFn = ASSET_COLORS[asset] || colors.white;
+            console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} m15: Comparaison échouée`);
+            console.log(`  Maintenant (ET): ${nowY}-${String(nowMo).padStart(2,'0')}-${String(nowD).padStart(2,'0')} ${String(nowH).padStart(2,'0')}:${String(nowMi).padStart(2,'0')}`);
+            console.log(`  Marché (ET): ${mY}-${String(mMo).padStart(2,'0')}-${String(mD).padStart(2,'0')} ${String(mH).padStart(2,'0')}:${String(mMi).padStart(2,'0')}`);
+            console.log(`  Conditions: Y=${nowY===mY}, Mo=${nowMo===mMo}, D=${nowD===mD}, H=${nowH===mH}, Mi=${nowMi}>=${mMi} && ${nowMi}<${mMi+15}=${nowMi >= mMi && nowMi < mMi + 15}`);
+        }
     } else if (timeframe === 'h1') {
         // Pour h1, vérifier que now est dans la même heure
         // Ex: bougie 14:00 -> valide de 14:00 à 14:59
@@ -485,6 +564,12 @@ async function refreshMarkets() {
             const parsed = parseSlug(slug, asset, tfHint);
             if (!parsed) continue;
             
+            // Pour m15, on ignore les marchés de la liste API car on utilise generateExpectedSlug
+            // Cela évite de tester des dizaines de marchés qui ne sont pas actifs
+            if (parsed.timeframe === 'm15') {
+                continue; // On récupérera m15 via generateExpectedSlug plus bas
+            }
+            
             // Vérifier que c'est la bougie active (prochaine)
             const [isActive] = isActiveMarket(parsed, asset, parsed.timeframe, now);
             
@@ -503,13 +588,25 @@ async function refreshMarkets() {
                                     clobCount++;
                                     break;
                                 }
-                            } catch (_) {}
+                            } catch (e) {
+                                if (DEBUG_MODE) {
+                                    console.error(`${colors.red('[ERROR]')} Erreur parsing clobTokenIds:`, e.message);
+                                }
+                            }
                         }
+                    }
+                } else if (DEBUG_MODE && isActive) {
+                    // Log si les markets ne sont pas dans le format attendu
+                    const colorFn = ASSET_COLORS[asset] || colors.white;
+                    console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} ${colors.cyan(parsed.timeframe)}: event.markets n'est pas un array ou est vide`);
+                    if (event.markets) {
+                        console.log(`  Type: ${typeof event.markets}, Structure:`, JSON.stringify(Object.keys(event)).substring(0, 100));
                     }
                 }
 
-                if (!newMarkets[asset][parsed.timeframe] || 
-                    new Date(parsed.timestamp) > new Date(newMarkets[asset][parsed.timeframe].timestamp)) {
+                // Ne remplacer que si on n'a pas encore de marché pour ce timeframe
+                // (les marchés trouvés par slug attendu ont priorité)
+                if (!newMarkets[asset][parsed.timeframe]) {
                     newMarkets[asset][parsed.timeframe] = {
                         slug,
                         title: event.title,
@@ -520,46 +617,62 @@ async function refreshMarkets() {
             }
         }
                 
-        // Pour chaque asset/timeframe manquant, essayer de récupérer par slug
+        // Pour chaque asset/timeframe, PRIORISER la récupération par slug attendu
+        // Cela garantit qu'on obtient le marché actuel, pas un ancien marché mal interprété
         for (const asset of ASSETS) {
             for (const tf of TIMEFRAMES) {
-                if (!newMarkets[asset][tf] || !newMarkets[asset][tf].clobTokenIds) {
-                    const expectedSlug = generateExpectedSlug(asset, tf, now);
-                    if (expectedSlug) {
-                        try {
-                            const response = await fetch(`https://gamma-api.polymarket.com/events/slug/${expectedSlug}`);
-                            if (response.ok) {
-                                const event = await response.json();
-                                if (event && event.markets && Array.isArray(event.markets) && event.markets.length > 0) {
-                                    for (const inner of event.markets) {
-                                        if (inner?.clobTokenIds) {
-                                            try {
-                                                const arr = typeof inner.clobTokenIds === 'string' ? JSON.parse(inner.clobTokenIds) : inner.clobTokenIds;
-                                                if (Array.isArray(arr) && arr.length >= 2) {
-                                                    // Extraire le timestamp depuis le slug
-                                                    const parsed = parseSlug(expectedSlug, asset);
-                                                    if (parsed) {
-                                                        newMarkets[asset][tf] = {
-                                                            slug: expectedSlug,
-                                                            title: event.title,
-                                                            clobTokenIds: arr,
-                                                            timestamp: parsed.timestamp
-                                                        };
-                                                        clobCount++;
-                                                        activeCount++;
-                                                        break;
+                // Toujours essayer de récupérer par slug attendu en premier
+                const expectedSlug = generateExpectedSlug(asset, tf, now);
+                if (expectedSlug) {
+                    try {
+                        const response = await fetch(`https://gamma-api.polymarket.com/events/slug/${expectedSlug}`);
+                        if (response.ok) {
+                            const event = await response.json();
+                            if (event && event.markets && Array.isArray(event.markets) && event.markets.length > 0) {
+                                for (const inner of event.markets) {
+                                    if (inner?.clobTokenIds) {
+                                        try {
+                                            const arr = typeof inner.clobTokenIds === 'string' ? JSON.parse(inner.clobTokenIds) : inner.clobTokenIds;
+                                            if (Array.isArray(arr) && arr.length >= 2) {
+                                                // Extraire le timestamp depuis le slug
+                                                const parsed = parseSlug(expectedSlug, asset);
+                                                if (parsed) {
+                                                    // Pour m15, on vérifie que le marché est vraiment actif
+                                                    // Pour h1 et daily, on fait confiance à generateExpectedSlug
+                                                    if (tf === 'm15') {
+                                                        const [isActive] = isActiveMarket(parsed, asset, tf, now);
+                                                        if (!isActive) {
+                                                            if (DEBUG_MODE) {
+                                                                const colorFn = ASSET_COLORS[asset] || colors.white;
+                                                                console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} m15: Slug attendu trouvé mais marché pas actif selon isActiveMarket`);
+                                                            }
+                                                            continue; // Passer au suivant
+                                                        }
                                                     }
+                                                    
+                                                    newMarkets[asset][tf] = {
+                                                        slug: expectedSlug,
+                                                        title: event.title,
+                                                        clobTokenIds: arr,
+                                                        timestamp: parsed.timestamp
+                                                    };
+                                                    clobCount++;
+                                                    activeCount++;
+                                                    break;
                                                 }
-                                            } catch (_) {}
-                                        }
+                                            }
+                                        } catch (_) {}
                                     }
                                 }
                             }
-                        } catch (err) {
-                            // Market doesn't exist yet, skip
                         }
+                    } catch (err) {
+                        // Market doesn't exist yet, skip
                     }
                 }
+                
+                // Si on n'a pas trouvé par slug attendu, utiliser le marché trouvé dans la liste
+                // (fallback pour les cas où generateExpectedSlug ne génère pas le bon slug)
             }
         }
         
@@ -586,6 +699,15 @@ async function refreshMarkets() {
                         if (DEBUG_MODE) {
                             console.log(`  ${colors.gray('API:')} https://gamma-api.polymarket.com/events/slug/${newMarket.slug}`);
                             console.log(`  ${colors.gray('PM:')}  https://polymarket.com/event/${newMarket.slug}`);
+                            console.log(`  ${colors.gray('CLOB:')} ${colors.cyan(newMarket.clobTokenIds.join(', '))}`);
+                        }
+                    } else if (DEBUG_MODE) {
+                        // Log en mode debug si les clobTokenIds manquent
+                        const colorFn = ASSET_COLORS[asset] || colors.white;
+                        const assetStr = colorFn(`[${asset}]`);
+                        console.log(`${assetStr} ${colors.yellow('⚠')} ${colors.cyan(tf)}: Marché trouvé mais pas de clobTokenIds`);
+                        if (newMarket?.slug) {
+                            console.log(`  ${colors.gray('API:')} https://gamma-api.polymarket.com/events/slug/${newMarket.slug}`);
                         }
                     }
                 }
@@ -626,25 +748,53 @@ async function getCLOBPricesBatch(requests) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requests)
         });
+        
+        if (!response.ok) {
+            if (DEBUG_MODE) {
+                console.error(`${colors.red('[ERROR]')} CLOB API répond avec status ${colors.yellow(response.status)}`);
+            }
+            return {};
+        }
+        
         const data = await response.json();
+        
+        if (DEBUG_MODE) {
+            console.log(`${colors.gray('[DEBUG]')} Réponse brute de l'API CLOB (échantillon):`, JSON.stringify(data).substring(0, 300));
+        }
         
         // Construire un map des résultats
         // Format de réponse: { "token_id": { "BUY": "1800.50", "SELL": "1801.00" } }
         const priceMap = {};
         if (data && typeof data === 'object') {
             Object.entries(data).forEach(([tokenId, sides]) => {
+                // Convertir tokenId en string pour être sûr de la cohérence
+                const tokenIdStr = String(tokenId);
                 if (sides && typeof sides === 'object') {
                     Object.entries(sides).forEach(([side, priceStr]) => {
-                        const key = `${tokenId}-${side}`;
+                        const key = `${tokenIdStr}-${side}`;
                         const price = parseFloat(priceStr);
                         priceMap[key] = isNaN(price) ? null : price;
                     });
                 }
             });
         }
+        
+        if (DEBUG_MODE && Object.keys(priceMap).length === 0 && requests.length > 0) {
+            console.error(`${colors.red('[ERROR]')} Aucun prix reçu de l'API CLOB. Réponse complète:`, JSON.stringify(data));
+        }
+        
+        if (DEBUG_MODE && Object.keys(priceMap).length > 0) {
+            console.log(`${colors.gray('[DEBUG]')} PriceMap construit avec ${Object.keys(priceMap).length} entrées`);
+            const sampleKeys = Object.keys(priceMap).slice(0, 4);
+            console.log(`${colors.gray('[DEBUG]')} Exemples de clés dans priceMap:`, sampleKeys);
+        }
+        
         return priceMap;
     } catch (error) {
         // Retourner un map vide en cas d'erreur
+        if (DEBUG_MODE) {
+            console.error(`${colors.red('[ERROR]')} Erreur lors de la récupération des prix CLOB:`, error.message);
+        }
         return {};
     }
 }
@@ -688,6 +838,14 @@ async function collectData() {
                 rows[asset][`${tf}_sell`] = '';
                 rows[asset][`${tf}_spread_up`] = '';
                 rows[asset][`${tf}_spread_down`] = '';
+                if (DEBUG_MODE) {
+                    const colorFn = ASSET_COLORS[asset] || colors.white;
+                    if (!market) {
+                        console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} ${colors.cyan(tf)}: Pas de marché dans MARKETS`);
+                    } else {
+                        console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} ${colors.cyan(tf)}: Pas de clobTokenIds (market existe mais clobTokenIds: ${market.clobTokenIds ? JSON.stringify(market.clobTokenIds) : 'null'})`);
+                    }
+                }
                 continue;
             }
 
@@ -698,6 +856,10 @@ async function collectData() {
                 rows[asset][`${tf}_sell`] = '';
                 rows[asset][`${tf}_spread_up`] = '';
                 rows[asset][`${tf}_spread_down`] = '';
+                if (DEBUG_MODE) {
+                    const colorFn = ASSET_COLORS[asset] || colors.white;
+                    console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} ${colors.cyan(tf)}: Impossible de parser le slug: ${market.slug}`);
+                }
                 continue;
             }
             
@@ -707,6 +869,10 @@ async function collectData() {
                 rows[asset][`${tf}_sell`] = '';
                 rows[asset][`${tf}_spread_up`] = '';
                 rows[asset][`${tf}_spread_down`] = '';
+                if (DEBUG_MODE) {
+                    const colorFn = ASSET_COLORS[asset] || colors.white;
+                    console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} ${colors.cyan(tf)}: Marché trouvé mais pas actif (slug: ${market.slug}, timestamp: ${parsed.timestamp})`);
+                }
                 needRefresh = true;
                 continue;
             }
@@ -714,17 +880,42 @@ async function collectData() {
             // Ajouter les requêtes pour ce marché
             const upTokenId = market.clobTokenIds[0];
             const downTokenId = market.clobTokenIds[1];
+            // Convertir en string pour être sûr du format
+            const upTokenIdStr = String(upTokenId);
+            const downTokenIdStr = String(downTokenId);
             batchRequests.push(
-                { token_id: upTokenId, side: 'BUY' },
-                { token_id: upTokenId, side: 'SELL' },
-                { token_id: downTokenId, side: 'BUY' },
-                { token_id: downTokenId, side: 'SELL' }
+                { token_id: upTokenIdStr, side: 'BUY' },
+                { token_id: upTokenIdStr, side: 'SELL' },
+                { token_id: downTokenIdStr, side: 'BUY' },
+                { token_id: downTokenIdStr, side: 'SELL' }
             );
+            if (DEBUG_MODE) {
+                const colorFn = ASSET_COLORS[asset] || colors.white;
+                console.log(`${colorFn(`[${asset}]`)} ${colors.green('+')} ${colors.cyan(tf)}: Ajouté 4 requêtes CLOB (upTokenId: ${upTokenIdStr.substring(0, 20)}..., downTokenId: ${downTokenIdStr.substring(0, 20)}...)`);
+            }
         }
     }
     
     // Étape 2: Faire UNE seule requête batch pour tous les prix
+    if (DEBUG_MODE && batchRequests.length > 0) {
+        console.log(`${colors.gray('[DEBUG]')} Envoi de ${colors.yellow(batchRequests.length)} requêtes CLOB`);
+        // Log des premières requêtes pour debug
+        const sampleRequests = batchRequests.slice(0, 4);
+        console.log(`${colors.gray('[DEBUG]')} Exemple de requêtes:`, JSON.stringify(sampleRequests));
+    }
     const priceMap = batchRequests.length > 0 ? await getCLOBPricesBatch(batchRequests) : {};
+    if (DEBUG_MODE && batchRequests.length > 0) {
+        const receivedCount = Object.keys(priceMap).length;
+        console.log(`${colors.gray('[DEBUG]')} Reçu ${colors.yellow(receivedCount)} prix sur ${colors.yellow(batchRequests.length)} requêtes`);
+        // Log des premières clés reçues pour debug
+        const sampleKeys = Object.keys(priceMap).slice(0, 4);
+        console.log(`${colors.gray('[DEBUG]')} Exemple de clés reçues:`, sampleKeys);
+        if (sampleKeys.length > 0) {
+            sampleKeys.forEach(key => {
+                console.log(`  ${key} = ${priceMap[key]}`);
+            });
+        }
+    }
     
     // Étape 3: Parser les résultats et remplir les rows
     for (const asset of ASSETS) {
@@ -748,10 +939,41 @@ async function collectData() {
             const upTokenId = market.clobTokenIds[0];
             const downTokenId = market.clobTokenIds[1];
             
-            const upBuyPrice = priceMap[`${upTokenId}-BUY`] ?? null;
-            const upSellPrice = priceMap[`${upTokenId}-SELL`] ?? null;
-            const downBuyPrice = priceMap[`${downTokenId}-BUY`] ?? null;
-            const downSellPrice = priceMap[`${downTokenId}-SELL`] ?? null;
+            // Convertir en string pour correspondre au format de priceMap
+            const upTokenIdStr = String(upTokenId);
+            const downTokenIdStr = String(downTokenId);
+            
+            // Construire les clés de recherche
+            const upBuyKey = `${upTokenIdStr}-BUY`;
+            const upSellKey = `${upTokenIdStr}-SELL`;
+            const downBuyKey = `${downTokenIdStr}-BUY`;
+            const downSellKey = `${downTokenIdStr}-SELL`;
+            
+            const upBuyPrice = priceMap[upBuyKey] ?? null;
+            const upSellPrice = priceMap[upSellKey] ?? null;
+            const downBuyPrice = priceMap[downBuyKey] ?? null;
+            const downSellPrice = priceMap[downSellKey] ?? null;
+
+            if (DEBUG_MODE) {
+                const hasPrices = upSellPrice !== null && downSellPrice !== null;
+                const colorFn = ASSET_COLORS[asset] || colors.white;
+                if (!hasPrices) {
+                    console.log(`${colorFn(`[${asset}]`)} ${colors.cyan(tf)}: Recherche avec upTokenId=${upTokenId}, downTokenId=${downTokenId}`);
+                    console.log(`  Clés recherchées: ${upBuyKey}, ${upSellKey}, ${downBuyKey}, ${downSellKey}`);
+                    console.log(`  Résultats: upBuy=${upBuyPrice}, upSell=${upSellPrice}, downBuy=${downBuyPrice}, downSell=${downSellPrice}`);
+                    // Vérifier si les clés existent avec un format différent
+                    const allKeys = Object.keys(priceMap);
+                    const matchingKeys = allKeys.filter(k => k.includes(upTokenId) || k.includes(downTokenId));
+                    if (matchingKeys.length > 0) {
+                        console.log(`  Clés trouvées contenant ces tokenIds:`, matchingKeys);
+                    } else if (allKeys.length > 0) {
+                        console.log(`  Aucune clé ne correspond. Exemples de clés dans priceMap:`, allKeys.slice(0, 4));
+                    }
+                } else {
+                    // Log aussi quand on trouve les prix pour confirmer
+                    console.log(`${colorFn(`[${asset}]`)} ${colors.green('✓')} ${colors.cyan(tf)}: Prix trouvés - upSell=${upSellPrice}, downSell=${downSellPrice}`);
+                }
+            }
 
             if (upSellPrice !== null && downSellPrice !== null) {
                 const spreadUp = (upSellPrice !== null && upBuyPrice !== null)
@@ -769,14 +991,18 @@ async function collectData() {
                 row[`${tf}_sell`] = '';
                 row[`${tf}_spread_up`] = '';
                 row[`${tf}_spread_down`] = '';
+                // Log en mode debug si les prix ne sont pas disponibles
+                if (DEBUG_MODE) {
+                    const colorFn = ASSET_COLORS[asset] || colors.white;
+                    console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} ${colors.cyan(tf)}: Pas de prix CLOB (upTokenId: ${upTokenId}, downTokenId: ${downTokenId})`);
+                }
             }
         }
 
-        // Ajouter au buffer si on a au moins un pari valide
-        if (row.hasAnyValidQuotes) {
-            delete row.hasAnyValidQuotes; // Nettoyer avant de push
-            BUFFERS[asset].push(row);
-        }
+        // Ajouter au buffer si on a un prix spot (même sans cotations CLOB)
+        // Toujours écrire les données pour avoir un historique complet
+        delete row.hasAnyValidQuotes; // Nettoyer avant de push
+        BUFFERS[asset].push(row);
     }
     
     // Si un marché n'était plus actif, rafraîchir les marchés
@@ -793,7 +1019,13 @@ async function flushToCSV() {
     
     for (const asset of ASSETS) {
         const buffer = BUFFERS[asset];
-        if (buffer.length === 0) continue;
+        if (buffer.length === 0) {
+            if (DEBUG_MODE) {
+                const colorFn = ASSET_COLORS[asset] || colors.white;
+                console.log(`${colorFn(`[${asset}]`)} ${colors.gray('○')} Buffer vide, pas d'écriture`);
+            }
+            continue;
+        }
 
         const csvPath = path.join(DATA_DIR, `${asset}.csv`);
         const lines = [];
