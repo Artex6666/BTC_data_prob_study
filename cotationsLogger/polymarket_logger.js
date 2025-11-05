@@ -28,11 +28,15 @@ const BUFFERS = {};
 // Timestamps des bougies actives
 const ACTIVE_BOUGIES = {};
 
+// Marchés pré-chargés pour la prochaine bougie (pour éviter le gap au début)
+const NEXT_MARKETS = {};
+
 // Initialisation
 ASSETS.forEach(asset => {
     MARKETS[asset] = { m15: null, h1: null, daily: null };
     BUFFERS[asset] = [];
     ACTIVE_BOUGIES[asset] = { m15: null, h1: null, daily: null };
+    NEXT_MARKETS[asset] = { m15: null, h1: null, daily: null };
 });
 
 // Créer le dossier data s'il n'existe pas
@@ -337,6 +341,93 @@ function getActiveBougie(asset, timeframe, now = new Date()) {
     const isDST = new Date().getTimezoneOffset() > 300;
     const offset = isDST ? -4 : -5;
     return new Date(Date.UTC(year, month, day, nextHour - offset, nextMinute, 0, 0));
+}
+
+/**
+ * Génère le slug Polymarket pour la prochaine bougie (pour pré-chargement)
+ */
+function generateNextSlug(asset, timeframe, now = new Date()) {
+    // Obtenir les composantes ET de "now"
+    const etFmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    });
+    
+    const nowParts = etFmt.formatToParts(now);
+    const get = (parts, type) => parseInt(parts.find(p => p.type === type)?.value || 0);
+    const nowY = get(nowParts, 'year');
+    const nowMo = get(nowParts, 'month');
+    const nowD = get(nowParts, 'day');
+    const nowH = get(nowParts, 'hour');
+    const nowMi = get(nowParts, 'minute');
+    
+    // Calculer la PROCHAINE bougie
+    let targetY = nowY, targetMo = nowMo, targetD = nowD, targetH = nowH, targetMi = nowMi;
+    
+    if (timeframe === 'm15') {
+        // Pour m15, on prend la PROCHAINE bougie (celle qui va commencer)
+        targetMi = Math.floor(nowMi / 15) * 15 + 15;
+        if (targetMi >= 60) {
+            targetMi = 0;
+            targetH = (nowH + 1) % 24;
+            if (targetH === 0) {
+                targetD++;
+            }
+        }
+    } else if (timeframe === 'h1') {
+        // Prochaine heure
+        targetH = (nowH + 1) % 24;
+        targetMi = 0;
+        if (targetH === 0) {
+            targetD++;
+        }
+    } else if (timeframe === 'daily') {
+        // Prochain jour
+        targetD++;
+        targetH = 0;
+        targetMi = 0;
+    }
+    
+    // Créer le slug selon le format Polymarket
+    let assetStr;
+    if (timeframe === 'm15') {
+        assetStr = asset.toLowerCase();
+    } else {
+        const fullNames = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'SOL': 'solana',
+            'XRP': 'xrp'
+        };
+        assetStr = fullNames[asset] || asset.toLowerCase();
+    }
+    
+    if (timeframe === 'm15') {
+        const testDate = new Date(Date.UTC(targetY, targetMo - 1, targetD, targetH, targetMi, 0, 0));
+        const tzParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
+            .formatToParts(testDate);
+        const tzName = tzParts.find(p => p.type === 'timeZoneName')?.value || 'EST';
+        const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
+        const iso = `${targetY}-${String(targetMo).padStart(2,'0')}-${String(targetD).padStart(2,'0')}T${String(targetH).padStart(2,'0')}:${String(targetMi).padStart(2,'0')}:00${offset}`;
+        const dateET = new Date(iso);
+        const unixTs = Math.floor(dateET.getTime() / 1000);
+        return `${assetStr}-updown-15m-${unixTs}`;
+    } else if (timeframe === 'h1') {
+        const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june',
+                       'july', 'august', 'september', 'october', 'november', 'december'];
+        const monthName = MONTHS[targetMo - 1];
+        const hour12 = targetH === 0 ? 12 : (targetH > 12 ? targetH - 12 : targetH);
+        const ampm = targetH < 12 ? 'am' : 'pm';
+        return `${assetStr}-up-or-down-${monthName}-${targetD}-${hour12}${ampm}-et`;
+    } else if (timeframe === 'daily') {
+        const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june',
+                       'july', 'august', 'september', 'october', 'november', 'december'];
+        const monthName = MONTHS[targetMo - 1];
+        return `${assetStr}-up-or-down-on-${monthName}-${targetD}`;
+    }
+    
+    return null;
 }
 
 /**
@@ -669,6 +760,71 @@ async function refreshMarkets() {
                     } catch (err) {
                         // Market doesn't exist yet, skip
                     }
+                    
+                    // Pré-charger la prochaine bougie si on est dans les dernières minutes/heures
+                    const etFmt = new Intl.DateTimeFormat('en-US', {
+                        timeZone: 'America/New_York',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                    const nowParts = etFmt.formatToParts(now);
+                    const nowH = parseInt(nowParts.find(p => p.type === 'hour')?.value || 0);
+                    const nowMi = parseInt(nowParts.find(p => p.type === 'minute')?.value || 0);
+                    
+                    let shouldPreload = false;
+                    
+                    if (tf === 'm15') {
+                        const minutesInCurrentBougie = nowMi % 15;
+                        // Si on est dans les 2 dernières minutes de la bougie (13-14 minutes), pré-charger la suivante
+                        shouldPreload = minutesInCurrentBougie >= 13;
+                    } else if (tf === 'h1') {
+                        // Si on est dans les 2 dernières minutes de l'heure (58-59 minutes), pré-charger la suivante
+                        shouldPreload = nowMi >= 58;
+                    } else if (tf === 'daily') {
+                        // Pour daily, pré-charger à partir de 11h ET (le marché qui sera actif à 12pm ET)
+                        // Les daily se mettent à jour à 12pm ET, donc à 11h on pré-charge le marché qui sera actif à 12h
+                        shouldPreload = nowH >= 11 && nowH < 12;
+                    }
+                    
+                    if (shouldPreload) {
+                        const nextSlug = generateNextSlug(asset, tf, now);
+                        if (nextSlug) {
+                            try {
+                                const nextResponse = await fetch(`https://gamma-api.polymarket.com/events/slug/${nextSlug}`);
+                                if (nextResponse.ok) {
+                                    const nextEvent = await nextResponse.json();
+                                    if (nextEvent && nextEvent.markets && Array.isArray(nextEvent.markets) && nextEvent.markets.length > 0) {
+                                        for (const inner of nextEvent.markets) {
+                                            if (inner?.clobTokenIds) {
+                                                try {
+                                                    const arr = typeof inner.clobTokenIds === 'string' ? JSON.parse(inner.clobTokenIds) : inner.clobTokenIds;
+                                                    if (Array.isArray(arr) && arr.length >= 2) {
+                                                        const parsed = parseSlug(nextSlug, asset);
+                                                        if (parsed) {
+                                                            NEXT_MARKETS[asset][tf] = {
+                                                                slug: nextSlug,
+                                                                title: nextEvent.title,
+                                                                clobTokenIds: arr,
+                                                                timestamp: parsed.timestamp
+                                                            };
+                                                            if (DEBUG_MODE) {
+                                                                const colorFn = ASSET_COLORS[asset] || colors.white;
+                                                                console.log(`${colorFn(`[${asset}]`)} ${colors.cyan('→')} ${colors.cyan(tf)}: Prochaine bougie pré-chargée (${nextEvent.title})`);
+                                                            }
+                                                            break;
+                                                        }
+                                                    }
+                                                } catch (_) {}
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (_) {
+                                // Next market doesn't exist yet, skip
+                            }
+                        }
+                    }
                 }
                 
                 // Si on n'a pas trouvé par slug attendu, utiliser le marché trouvé dans la liste
@@ -681,7 +837,25 @@ async function refreshMarkets() {
         ASSETS.forEach(asset => {
             TIMEFRAMES.forEach(tf => {
                 const oldMarket = MARKETS[asset][tf];
-                const newMarket = newMarkets[asset][tf];
+                let newMarket = newMarkets[asset][tf];
+                
+                // Vérifier si on doit utiliser le marché pré-chargé
+                if (!newMarket && NEXT_MARKETS[asset][tf]) {
+                    const nextMarket = NEXT_MARKETS[asset][tf];
+                    const parsed = parseSlug(nextMarket.slug, asset);
+                    if (parsed) {
+                        const [isActive] = isActiveMarket(parsed, asset, tf, now);
+                        if (isActive) {
+                            // Le marché pré-chargé est maintenant actif, l'utiliser
+                            newMarket = nextMarket;
+                            NEXT_MARKETS[asset][tf] = null; // Nettoyer
+                            if (DEBUG_MODE) {
+                                const colorFn = ASSET_COLORS[asset] || colors.white;
+                                console.log(`${colorFn(`[${asset}]`)} ${colors.green('→')} ${colors.cyan(tf)}: Switch vers marché pré-chargé (${newMarket.title})`);
+                            }
+                        }
+                    }
+                }
                 
                 if ((!oldMarket && newMarket) || 
                     (oldMarket && newMarket && oldMarket.slug !== newMarket.slug)) {
@@ -831,7 +1005,33 @@ async function collectData() {
 
         // Préparer les requêtes CLOB pour cet asset
         for (const tf of TIMEFRAMES) {
-            const market = MARKETS[asset][tf];
+            let market = MARKETS[asset][tf];
+            
+            // Vérifier si le marché actuel est toujours actif, sinon utiliser le marché pré-chargé
+            if (market) {
+                const parsed = parseSlug(market.slug, asset);
+                if (parsed) {
+                    const [isActive] = isActiveMarket(parsed, asset, tf, now);
+                    if (!isActive && NEXT_MARKETS[asset][tf]) {
+                        // Le marché actuel n'est plus actif, utiliser le marché pré-chargé
+                        const nextMarket = NEXT_MARKETS[asset][tf];
+                        const nextParsed = parseSlug(nextMarket.slug, asset);
+                        if (nextParsed) {
+                            const [nextIsActive] = isActiveMarket(nextParsed, asset, tf, now);
+                            if (nextIsActive) {
+                                market = nextMarket;
+                                MARKETS[asset][tf] = nextMarket;
+                                ACTIVE_BOUGIES[asset][tf] = nextMarket.timestamp;
+                                NEXT_MARKETS[asset][tf] = null; // Nettoyer
+                                if (DEBUG_MODE) {
+                                    const colorFn = ASSET_COLORS[asset] || colors.white;
+                                    console.log(`${colorFn(`[${asset}]`)} ${colors.green('→')} ${colors.cyan(tf)}: Switch automatique vers marché pré-chargé`);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             
             if (!market || !market.clobTokenIds || market.clobTokenIds.length < 2) {
                 rows[asset][`${tf}_buy`] = '';
