@@ -275,11 +275,13 @@ def add_price_features(df: pd.DataFrame, config: FeatureConfig) -> pd.DataFrame:
         df[f"{prefix}_vol_zscore"] = (volume - volume.rolling(60).mean()) / (
             volume.rolling(60).std() + EPS
         )
+        vwap_cols = {}
         for window in (60, 240):
             label = _label_from_window(window)
             vwap = compute_vwap(price, high, low, volume, window)
-            df[f"{prefix}_vwap_{label}"] = vwap
-            df[f"{prefix}_close_over_vwap_{label}"] = price / (vwap + EPS) - 1
+            vwap_cols[f"{prefix}_vwap_{label}"] = vwap
+            vwap_cols[f"{prefix}_close_over_vwap_{label}"] = price / (vwap + EPS) - 1
+        df = df.assign(**vwap_cols)
 
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     return df
@@ -289,7 +291,7 @@ def add_time_features(df: pd.DataFrame, timestamp_col: str = "timestamp") -> pd.
     """Ajoute des features temporelles (sinus/cosinus, heure, jour, secondes)."""
 
     ts = df[timestamp_col]
-    if not np.issubdtype(ts.dtype, np.datetime64):
+    if not pd.api.types.is_datetime64_any_dtype(ts):
         raise ValueError("La colonne de timestamp doit être de type datetime.")
 
     df["hour"] = ts.dt.hour
@@ -413,24 +415,29 @@ def add_liquidity_features(
         agg["prev_low"] = agg["htf_low"].shift(1)
         expanded = agg.reindex(base.index, method="ffill")
 
-        df[f"{config.prefix}_htf_high_{label}"] = expanded["htf_high"].values
-        df[f"{config.prefix}_htf_low_{label}"] = expanded["htf_low"].values
-        df[f"{config.prefix}_close_over_htf_high_{label}"] = (
-            df[config.price_col] / (expanded["htf_high"] + EPS) - 1
-        )
-        df[f"{config.prefix}_close_over_htf_low_{label}"] = (
-            df[config.price_col] / (expanded["htf_low"] + EPS) - 1
-        )
-        df[f"{config.prefix}_liquidity_grab_htf_high_{label}"] = (
-            (df[config.high_col] > expanded["prev_high"])
-            & (df[config.price_col] < expanded["prev_high"])
-            & expanded["prev_high"].notna()
+        htf_high = expanded["htf_high"].to_numpy()
+        htf_low = expanded["htf_low"].to_numpy()
+        prev_high = expanded["prev_high"].to_numpy()
+        prev_low = expanded["prev_low"].to_numpy()
+        price_vals = df[config.price_col].to_numpy()
+        high_vals = df[config.high_col].to_numpy()
+        low_vals = df[config.low_col].to_numpy()
+
+        df[f"{config.prefix}_htf_high_{label}"] = htf_high
+        df[f"{config.prefix}_htf_low_{label}"] = htf_low
+        df[f"{config.prefix}_close_over_htf_high_{label}"] = price_vals / (htf_high + EPS) - 1
+        df[f"{config.prefix}_close_over_htf_low_{label}"] = price_vals / (htf_low + EPS) - 1
+
+        valid_prev_high = ~np.isnan(prev_high)
+        valid_prev_low = ~np.isnan(prev_low)
+        liquidity_high = (
+            (high_vals > prev_high) & (price_vals < prev_high) & valid_prev_high
         ).astype(int)
-        df[f"{config.prefix}_liquidity_grab_htf_low_{label}"] = (
-            (df[config.low_col] < expanded["prev_low"])
-            & (df[config.price_col] > expanded["prev_low"])
-            & expanded["prev_low"].notna()
+        liquidity_low = (
+            (low_vals < prev_low) & (price_vals > prev_low) & valid_prev_low
         ).astype(int)
+        df[f"{config.prefix}_liquidity_grab_htf_high_{label}"] = liquidity_high
+        df[f"{config.prefix}_liquidity_grab_htf_low_{label}"] = liquidity_low
 
     return df
 

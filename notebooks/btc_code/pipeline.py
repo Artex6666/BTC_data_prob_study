@@ -108,6 +108,8 @@ def enrich_polymarket_with_features(
         base = base.iloc[offset::stride].reset_index(drop=True)
 
     merged = align_to_ohlc(base, ohlc_features, tolerance=pd.Timedelta(minutes=5))
+    if "atr_15m_ohlc" in merged.columns and "atr_15m" not in merged.columns:
+        merged["atr_15m"] = merged["atr_15m_ohlc"]
     merged = add_time_features(merged, "timestamp")
 
     merged["spot_second"] = merged["timestamp"].dt.second
@@ -150,7 +152,12 @@ def enrich_polymarket_with_features(
     ) / (merged["spot_price"].rolling(120).std() + 1e-9)
 
     merged.replace([np.inf, -np.inf], np.nan, inplace=True)
-    merged = merged.dropna().reset_index(drop=True)
+    if "atr_15m" in merged.columns:
+        merged["atr_15m"] = merged["atr_15m"].ffill()
+    elif "atr_15m_ohlc" in merged.columns:
+        merged["atr_15m"] = merged["atr_15m_ohlc"].ffill()
+    essential_cols = [col for col in ["spot_price"] if col in merged.columns]
+    merged = merged.dropna(subset=essential_cols).reset_index(drop=True)
     return merged
 
 
@@ -165,6 +172,21 @@ def prepare_timeframe_tables(
     df = compute_market_probabilities(df, timeframe)
     df = compute_contract_price_features(df, timeframe, price_col=price_col)
     df = compute_forward_returns(df, timeframe, price_col=price_col)
+
+    if "atr_15m" not in df.columns:
+        if "atr_15m_ohlc" in df.columns:
+            df["atr_15m"] = df["atr_15m_ohlc"]
+        elif "m1_atr_14" in df.columns:
+            df["atr_15m"] = df["m1_atr_14"]
+        else:
+            atr = compute_atr(
+                df.get("high", df[price_col]),
+                df.get("low", df[price_col]),
+                df[price_col],
+                window=15,
+            )
+            df["atr_15m"] = atr
+    df["atr_15m"] = df["atr_15m"].ffill()
 
     df[f"{timeframe}_prob_base"] = df[f"{timeframe}_prob_up_market"]
     df[f"{timeframe}_contract_id_str"] = df[f"{timeframe}_contract_id"]
@@ -216,7 +238,8 @@ def build_regression_dataset(df: pd.DataFrame, timeframe: Timeframe):
             f"{timeframe}_contract_id",
         ]
     ]
-    dataset = df[["timestamp"] + feature_cols + target_cols].dropna().reset_index(drop=True)
+    subset = df[["timestamp"] + feature_cols + target_cols].dropna()
+    dataset = subset.reset_index().rename(columns={"index": "original_index"})
     return dataset, feature_cols, target_cols
 
 

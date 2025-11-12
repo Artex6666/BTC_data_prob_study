@@ -29,9 +29,11 @@ def load_polymarket_data(
     df = pd.read_csv(
         path or DataPaths().polymarket,
         usecols=usecols,
-        parse_dates=["timestamp"],
     )
-    df["timestamp"] = df["timestamp"].dt.tz_convert(tz)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+    df = df.dropna(subset=["timestamp"])
+    if tz:
+        df["timestamp"] = df["timestamp"].dt.tz_convert(tz)
     df = df.sort_values("timestamp").reset_index(drop=True)
     return df
 
@@ -47,9 +49,11 @@ def load_ohlc_1m_data(
     df = pd.read_csv(
         path or DataPaths().ohlc_1m,
         usecols=usecols,
-        parse_dates=["timestamp"],
     )
-    df["timestamp"] = df["timestamp"].dt.tz_convert(tz)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+    df = df.dropna(subset=["timestamp"])
+    if tz:
+        df["timestamp"] = df["timestamp"].dt.tz_convert(tz)
     df = df.sort_values("timestamp").reset_index(drop=True)
     return df
 
