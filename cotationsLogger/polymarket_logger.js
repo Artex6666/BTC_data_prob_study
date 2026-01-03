@@ -4,7 +4,7 @@ const path = require('path');
 const colors = require('colors');
 
 // Configuration
-const ASSETS = ['BTC', 'ETH', 'SOL'];
+const ASSETS = ['BTC', 'ETH'];
 const TIMEFRAMES = ['m15', 'h1', 'daily'];
 const DATA_DIR = path.join(__dirname, '..', 'data');
 
@@ -1034,10 +1034,10 @@ async function collectData() {
             }
             
             if (!market || !market.clobTokenIds || market.clobTokenIds.length < 2) {
-                rows[asset][`${tf}_buy`] = '';
-                rows[asset][`${tf}_sell`] = '';
-                rows[asset][`${tf}_spread_up`] = '';
-                rows[asset][`${tf}_spread_down`] = '';
+                rows[asset][`${tf}_up_ask`] = '';
+                rows[asset][`${tf}_up_bid`] = '';
+                rows[asset][`${tf}_down_ask`] = '';
+                rows[asset][`${tf}_down_bid`] = '';
                 if (DEBUG_MODE) {
                     const colorFn = ASSET_COLORS[asset] || colors.white;
                     if (!market) {
@@ -1052,10 +1052,10 @@ async function collectData() {
             // Vérifier que le marché correspond encore à la bougie active
             const parsed = parseSlug(market.slug, asset);
             if (!parsed) {
-                rows[asset][`${tf}_buy`] = '';
-                rows[asset][`${tf}_sell`] = '';
-                rows[asset][`${tf}_spread_up`] = '';
-                rows[asset][`${tf}_spread_down`] = '';
+                rows[asset][`${tf}_up_ask`] = '';
+                rows[asset][`${tf}_up_bid`] = '';
+                rows[asset][`${tf}_down_ask`] = '';
+                rows[asset][`${tf}_down_bid`] = '';
                 if (DEBUG_MODE) {
                     const colorFn = ASSET_COLORS[asset] || colors.white;
                     console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} ${colors.cyan(tf)}: Impossible de parser le slug: ${market.slug}`);
@@ -1065,10 +1065,10 @@ async function collectData() {
             
             const [isActive] = isActiveMarket(parsed, asset, tf, now);
             if (!isActive) {
-                rows[asset][`${tf}_buy`] = '';
-                rows[asset][`${tf}_sell`] = '';
-                rows[asset][`${tf}_spread_up`] = '';
-                rows[asset][`${tf}_spread_down`] = '';
+                rows[asset][`${tf}_up_ask`] = '';
+                rows[asset][`${tf}_up_bid`] = '';
+                rows[asset][`${tf}_down_ask`] = '';
+                rows[asset][`${tf}_down_bid`] = '';
                 if (DEBUG_MODE) {
                     const colorFn = ASSET_COLORS[asset] || colors.white;
                     console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} ${colors.cyan(tf)}: Marché trouvé mais pas actif (slug: ${market.slug}, timestamp: ${parsed.timestamp})`);
@@ -1175,22 +1175,16 @@ async function collectData() {
                 }
             }
 
+            // Assigner les prix avec les nouveaux noms de colonnes
+            // ask = prix pour acheter (BUY), bid = prix pour vendre (SELL)
+            row[`${tf}_up_ask`] = upBuyPrice !== null ? upBuyPrice.toFixed(2) : '';
+            row[`${tf}_up_bid`] = upSellPrice !== null ? upSellPrice.toFixed(2) : '';
+            row[`${tf}_down_ask`] = downBuyPrice !== null ? downBuyPrice.toFixed(2) : '';
+            row[`${tf}_down_bid`] = downSellPrice !== null ? downSellPrice.toFixed(2) : '';
+            
             if (upSellPrice !== null && downSellPrice !== null) {
-                const spreadUp = (upSellPrice !== null && upBuyPrice !== null)
-                    ? (upSellPrice - upBuyPrice) : null;
-                const spreadDown = (downSellPrice !== null && downBuyPrice !== null) 
-                    ? (downSellPrice - downBuyPrice) : null;
-                
-                row[`${tf}_buy`] = upSellPrice.toFixed(2);
-                row[`${tf}_sell`] = downSellPrice.toFixed(2);
-                row[`${tf}_spread_up`] = spreadUp !== null ? spreadUp.toFixed(2) : '';
-                row[`${tf}_spread_down`] = spreadDown !== null ? spreadDown.toFixed(2) : '';
                 row.hasAnyValidQuotes = true;
             } else {
-                row[`${tf}_buy`] = '';
-                row[`${tf}_sell`] = '';
-                row[`${tf}_spread_up`] = '';
-                row[`${tf}_spread_down`] = '';
                 // Log en mode debug si les prix ne sont pas disponibles
                 if (DEBUG_MODE) {
                     const colorFn = ASSET_COLORS[asset] || colors.white;
@@ -1232,30 +1226,29 @@ async function flushToCSV() {
 
         // Si le fichier n'existe pas, ajouter l'en-tête
         if (!fs.existsSync(csvPath)) {
-            const header = 'timestamp,spot_price,m15_buy,m15_sell,m15_spread_up,m15_spread_down,h1_buy,h1_sell,h1_spread_up,h1_spread_down,daily_buy,daily_sell,daily_spread_up,daily_spread_down';
+            const header = 'timestamp,spot_price,m15_up_ask,m15_up_bid,m15_down_ask,m15_down_bid,h1_up_ask,h1_up_bid,h1_down_ask,h1_down_bid,daily_up_ask,daily_up_bid,daily_down_ask,daily_down_bid';
             lines.push(header);
         }
 
         // Ajouter les nouvelles lignes
         for (const row of buffer) {
             const cleanValue = (val) => (val && val !== 'NaN' && val !== null) ? val : '';
-            // XRP utilise 4 décimales pour le prix spot
-            const spotDecimals = asset === 'XRP' ? 4 : 2;
+            const spotDecimals = 2;
             const line = [
                 row.timestamp,
                 row.spot_price.toFixed(spotDecimals),
-                cleanValue(row.m15_buy),
-                cleanValue(row.m15_sell),
-                cleanValue(row.m15_spread_up),
-                cleanValue(row.m15_spread_down),
-                cleanValue(row.h1_buy),
-                cleanValue(row.h1_sell),
-                cleanValue(row.h1_spread_up),
-                cleanValue(row.h1_spread_down),
-                cleanValue(row.daily_buy),
-                cleanValue(row.daily_sell),
-                cleanValue(row.daily_spread_up),
-                cleanValue(row.daily_spread_down)
+                cleanValue(row.m15_up_ask),
+                cleanValue(row.m15_up_bid),
+                cleanValue(row.m15_down_ask),
+                cleanValue(row.m15_down_bid),
+                cleanValue(row.h1_up_ask),
+                cleanValue(row.h1_up_bid),
+                cleanValue(row.h1_down_ask),
+                cleanValue(row.h1_down_bid),
+                cleanValue(row.daily_up_ask),
+                cleanValue(row.daily_up_bid),
+                cleanValue(row.daily_down_ask),
+                cleanValue(row.daily_down_bid)
             ].join(',');
             lines.push(line);
         }
