@@ -1302,17 +1302,17 @@ async function main() {
         tries += 1;
     }
 
-    // Tick toutes les secondes
+    // Tick toutes les 500ms (2 fois par seconde)
     setInterval(async () => {
         await collectData();
-    }, 1000);
+    }, 500);
 
     // Flush toutes les 60 secondes
     setInterval(async () => {
         await flushToCSV();
     }, 60000);
 
-    console.log(colors.green('✓ Logging démarré') + colors.gray(' (tick: 1s, flush: 60s)\n'));
+    console.log(colors.green('✓ Logging démarré') + colors.gray(' (tick: 500ms, flush: 60s)\n'));
 }
 
 // Gestion des erreurs non catchées
