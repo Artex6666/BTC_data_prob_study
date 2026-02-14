@@ -1,11 +1,12 @@
 const fetch = require('node-fetch');
+const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
 const colors = require('colors');
 
 // Configuration
 const ASSETS = ['BTC', 'ETH'];
-const TIMEFRAMES = ['m15', 'h1', 'daily'];
+const TIMEFRAMES = ['m5', 'm15', 'h1', 'daily'];
 const DATA_DIR = path.join(__dirname, '..', 'data');
 
 // Flag debug depuis argv
@@ -31,12 +32,37 @@ const ACTIVE_BOUGIES = {};
 // Marchés pré-chargés pour la prochaine bougie (pour éviter le gap au début)
 const NEXT_MARKETS = {};
 
+// État spot Binance (WSS aggTrade): prix + volume depuis dernière snapshot
+const SPOT_STATE = {};
+// Dernière row poussée par asset (pour n'écrire que si changement)
+const LAST_ROW = {};
+const LAST_PUSH_TS = {};
+
+// ── Polymarket WSS (market channel) – volumes temps réel ──
+// Accumule les size de chaque trade (last_trade_price) par asset/tf/direction
+const TRADE_VOLUMES = {};
+// Snapshot du cumulé au dernier push (pour calcul du delta par ligne CSV)
+const LAST_VOL_SNAPSHOT = {};
+// Map tokenId → { asset, tf, direction } pour lookup rapide des trades
+const TOKEN_TO_INFO = {};
+// État WebSocket Polymarket
+const POLYMARKET_WS_URL = 'wss://ws-subscriptions-clob.polymarket.com/ws/market';
+let polymarketWS = null;
+let polymarketPingInterval = null;
+// Token IDs actuellement souscrits (pour gérer sub/unsub)
+let subscribedTokenIds = [];
+
 // Initialisation
 ASSETS.forEach(asset => {
-    MARKETS[asset] = { m15: null, h1: null, daily: null };
+    MARKETS[asset] = { m5: null, m15: null, h1: null, daily: null };
     BUFFERS[asset] = [];
-    ACTIVE_BOUGIES[asset] = { m15: null, h1: null, daily: null };
-    NEXT_MARKETS[asset] = { m15: null, h1: null, daily: null };
+    ACTIVE_BOUGIES[asset] = { m5: null, m15: null, h1: null, daily: null };
+    NEXT_MARKETS[asset] = { m5: null, m15: null, h1: null, daily: null };
+    SPOT_STATE[asset] = { price: null, volumeSinceSnapshot: 0 };
+    LAST_ROW[asset] = null;
+    LAST_PUSH_TS[asset] = 0;
+    TRADE_VOLUMES[asset] = { m5: { up: 0, down: 0 }, m15: { up: 0, down: 0 } };
+    LAST_VOL_SNAPSHOT[asset] = { m5: { up: 0, down: 0 }, m15: { up: 0, down: 0 } };
 });
 
 // Créer le dossier data s'il n'existe pas
@@ -59,8 +85,8 @@ function parseSlug(slug, asset, timeframeOverride = null) {
     const shortName = asset.toLowerCase();
     const fullName = fullNames[asset] || shortName;
     
-    // Nouveau format: btc-updown-15m-1762104600 (timestamp Unix)
-    const unixPattern = new RegExp(`(${shortName}|${fullName})-updown-(15m|1h|1d)-(\\d+)`);
+    // Nouveau format: btc-updown-5m/15m/1h/1d-1762104600 (timestamp Unix)
+    const unixPattern = new RegExp(`(${shortName}|${fullName})-updown-(5m|15m|1h|1d)-(\\d+)`);
     const unixMatch = slug.match(unixPattern);
     
     if (unixMatch) {
@@ -68,7 +94,8 @@ function parseSlug(slug, asset, timeframeOverride = null) {
         const unixTimestamp = parseInt(unixMatch[3]);
         
         let timeframe;
-        if (tfMatch === '15m') timeframe = 'm15';
+        if (tfMatch === '5m') timeframe = 'm5';
+        else if (tfMatch === '15m') timeframe = 'm15';
         else if (tfMatch === '1h') timeframe = 'h1';
         else if (tfMatch === '1d') timeframe = 'daily';
         else return null;
@@ -300,7 +327,13 @@ function getActiveBougie(asset, timeframe, now = new Date()) {
     let nextHour = hour;
     let nextMinute = minute;
     
-    if (timeframe === 'm15') {
+    if (timeframe === 'm5') {
+        nextMinute = Math.ceil(minute / 5) * 5;
+        if (nextMinute === 60) {
+            nextMinute = 0;
+            nextHour = hour + 1;
+        }
+    } else if (timeframe === 'm15') {
         nextMinute = Math.ceil(minute / 15) * 15;
         if (nextMinute === 60) {
             nextMinute = 0;
@@ -361,19 +394,23 @@ function generateNextSlug(asset, timeframe, now = new Date()) {
     const nowD = get(nowParts, 'day');
     const nowH = get(nowParts, 'hour');
     const nowMi = get(nowParts, 'minute');
-    
+
     // Calculer la PROCHAINE bougie
     let targetY = nowY, targetMo = nowMo, targetD = nowD, targetH = nowH, targetMi = nowMi;
     
-    if (timeframe === 'm15') {
-        // Pour m15, on prend la PROCHAINE bougie (celle qui va commencer)
+    if (timeframe === 'm5') {
+        targetMi = Math.floor(nowMi / 5) * 5 + 5;
+        if (targetMi >= 60) {
+            targetMi = 0;
+            targetH = (nowH + 1) % 24;
+            if (targetH === 0) targetD++;
+        }
+    } else if (timeframe === 'm15') {
         targetMi = Math.floor(nowMi / 15) * 15 + 15;
         if (targetMi >= 60) {
             targetMi = 0;
             targetH = (nowH + 1) % 24;
-            if (targetH === 0) {
-                targetD++;
-            }
+            if (targetH === 0) targetD++;
         }
     } else if (timeframe === 'h1') {
         // Prochaine heure
@@ -389,9 +426,8 @@ function generateNextSlug(asset, timeframe, now = new Date()) {
         targetMi = 0;
     }
     
-    // Créer le slug selon le format Polymarket
     let assetStr;
-    if (timeframe === 'm15') {
+    if (timeframe === 'm5' || timeframe === 'm15') {
         assetStr = asset.toLowerCase();
     } else {
         const fullNames = {
@@ -403,7 +439,8 @@ function generateNextSlug(asset, timeframe, now = new Date()) {
         assetStr = fullNames[asset] || asset.toLowerCase();
     }
     
-    if (timeframe === 'm15') {
+    if (timeframe === 'm5' || timeframe === 'm15') {
+        const tfStr = timeframe === 'm5' ? '5m' : '15m';
         const testDate = new Date(Date.UTC(targetY, targetMo - 1, targetD, targetH, targetMi, 0, 0));
         const tzParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
             .formatToParts(testDate);
@@ -412,7 +449,7 @@ function generateNextSlug(asset, timeframe, now = new Date()) {
         const iso = `${targetY}-${String(targetMo).padStart(2,'0')}-${String(targetD).padStart(2,'0')}T${String(targetH).padStart(2,'0')}:${String(targetMi).padStart(2,'0')}:00${offset}`;
         const dateET = new Date(iso);
         const unixTs = Math.floor(dateET.getTime() / 1000);
-        return `${assetStr}-updown-15m-${unixTs}`;
+        return `${assetStr}-updown-${tfStr}-${unixTs}`;
     } else if (timeframe === 'h1') {
         const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june',
                        'july', 'august', 'september', 'october', 'november', 'december'];
@@ -452,11 +489,10 @@ function generateExpectedSlug(asset, timeframe, now = new Date()) {
     // Calculer la prochaine bougie
     let targetY = nowY, targetMo = nowMo, targetD = nowD, targetH = nowH, targetMi = nowMi;
     
-    if (timeframe === 'm15') {
-        // Pour m15, on prend la bougie actuelle (celle qui a commencé)
-        // Ex: à 11:47, la bougie actuelle est celle qui a commencé à 11:45
+    if (timeframe === 'm5') {
+        targetMi = Math.floor(nowMi / 5) * 5;
+    } else if (timeframe === 'm15') {
         targetMi = Math.floor(nowMi / 15) * 15;
-        // Pas besoin de gérer le cas targetMi === 60 car Math.floor garantit 0, 15, 30, ou 45
     } else if (timeframe === 'h1') {
         // Pas de décalage : on reste sur l'heure actuelle
         targetH = nowH;
@@ -472,10 +508,9 @@ function generateExpectedSlug(asset, timeframe, now = new Date()) {
     }
     
     // Créer le slug selon le format Polymarket
-    // m15 utilise les codes courts, h1/daily utilisent les noms complets
     let assetStr;
-    if (timeframe === 'm15') {
-        assetStr = asset.toLowerCase(); // btc, eth, sol, xrp
+    if (timeframe === 'm5' || timeframe === 'm15') {
+        assetStr = asset.toLowerCase();
     } else {
         const fullNames = {
             'BTC': 'bitcoin',
@@ -486,8 +521,8 @@ function generateExpectedSlug(asset, timeframe, now = new Date()) {
         assetStr = fullNames[asset] || asset.toLowerCase();
     }
     
-    if (timeframe === 'm15') {
-        // Format: btc-updown-15m-1762120800 (timestamp Unix)
+    if (timeframe === 'm5' || timeframe === 'm15') {
+        const tfStr = timeframe === 'm5' ? '5m' : '15m';
         // Le timestamp Unix doit représenter l'heure ET, pas UTC
         // On crée une date en ET avec l'offset approprié, puis on la convertit en timestamp Unix
         // Pour déterminer EST/EDT, on utilise une date de test
@@ -503,7 +538,7 @@ function generateExpectedSlug(asset, timeframe, now = new Date()) {
         
         // Convertir en timestamp Unix (en secondes)
         const unixTs = Math.floor(dateET.getTime() / 1000);
-        return `${assetStr}-updown-15m-${unixTs}`;
+        return `${assetStr}-updown-${tfStr}-${unixTs}`;
     } else if (timeframe === 'h1') {
         // Format: bitcoin-up-or-down-november-2-3pm-et
         const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june',
@@ -553,11 +588,12 @@ function isActiveMarket(parsed, asset, timeframe, now = new Date()) {
     const mH = get(mParts, 'hour');
     const mMi = get(mParts, 'minute');
 
-    // Comparer si "now" est dans la même bougie que le marché
     let matches = false;
     
-    if (timeframe === 'm15') {
-        // Pour m15, vérifier que now est dans les 15 minutes de la bougie
+    if (timeframe === 'm5') {
+        matches = nowY === mY && nowMo === mMo && nowD === mD && nowH === mH &&
+                  nowMi >= mMi && nowMi < mMi + 5;
+    } else if (timeframe === 'm15') {
         // Ex: bougie 14:00 -> valide de 14:00 à 14:14
         // Ex: bougie 12:45 -> valide de 12:45 à 12:59
         matches = nowY === mY && nowMo === mMo && nowD === mD && nowH === mH && 
@@ -618,7 +654,7 @@ async function refreshMarkets() {
         const newMarkets = {};
 
         ASSETS.forEach(asset => {
-            newMarkets[asset] = { m15: null, h1: null, daily: null };
+            newMarkets[asset] = { m5: null, m15: null, h1: null, daily: null };
         });
 
         let activeCount = 0;
@@ -646,7 +682,8 @@ async function refreshMarkets() {
                 const rec = Array.isArray(event.series) && event.series.length > 0 ? (event.series[0]?.recurrence || null) : null;
                 if (rec) {
                     const r = String(rec).toLowerCase();
-                    if (r.includes('15')) tfHint = 'm15';
+                    if (r.includes('5')) tfHint = 'm5';
+                    else if (r.includes('15')) tfHint = 'm15';
                     else if (r.includes('1h') || r.includes('hour')) tfHint = 'h1';
                     else if (r.includes('day') || r.includes('daily') || r.includes('1d') || r.includes('24')) tfHint = 'daily';
                 }
@@ -655,10 +692,8 @@ async function refreshMarkets() {
             const parsed = parseSlug(slug, asset, tfHint);
             if (!parsed) continue;
             
-            // Pour m15, on ignore les marchés de la liste API car on utilise generateExpectedSlug
-            // Cela évite de tester des dizaines de marchés qui ne sont pas actifs
-            if (parsed.timeframe === 'm15') {
-                continue; // On récupérera m15 via generateExpectedSlug plus bas
+            if (parsed.timeframe === 'm5' || parsed.timeframe === 'm15') {
+                continue; // Récupérés via generateExpectedSlug
             }
             
             // Vérifier que c'est la bougie active (prochaine)
@@ -666,27 +701,26 @@ async function refreshMarkets() {
             
             if (isActive) {
                 activeCount++;
-                // Extraire clobTokenIds depuis l'objet interne event.markets
                 let clobs = null;
+                let innerUsed = null;
                 if (Array.isArray(event.markets) && event.markets.length > 0) {
-                    // Prendre le premier market qui a des clobTokenIds
                     for (const inner of event.markets) {
                         if (inner?.clobTokenIds) {
                             try {
                                 const arr = typeof inner.clobTokenIds === 'string' ? JSON.parse(inner.clobTokenIds) : inner.clobTokenIds;
                                 if (Array.isArray(arr) && arr.length >= 2) {
                                     clobs = arr;
+                                    innerUsed = inner;
                                     clobCount++;
                                     break;
                                 }
                             } catch (e) {
-                                if (DEBUG_MODE) {
-                                    console.error(`${colors.red('[ERROR]')} Erreur parsing clobTokenIds:`, e.message);
-                                }
+                                if (DEBUG_MODE) console.error(`${colors.red('[ERROR]')} Erreur parsing clobTokenIds:`, e.message);
                             }
                         }
                     }
-                } else if (DEBUG_MODE && isActive) {
+                }
+                if (DEBUG_MODE && isActive && (!event.markets || !Array.isArray(event.markets) || event.markets.length === 0)) {
                     // Log si les markets ne sont pas dans le format attendu
                     const colorFn = ASSET_COLORS[asset] || colors.white;
                     console.log(`${colorFn(`[${asset}]`)} ${colors.yellow('⚠')} ${colors.cyan(parsed.timeframe)}: event.markets n'est pas un array ou est vide`);
@@ -702,6 +736,8 @@ async function refreshMarkets() {
                         slug,
                         title: event.title,
                         clobTokenIds: clobs,
+                        condition_id: innerUsed?.condition_id || innerUsed?.conditionId || null,
+                        event_id: event?.id ?? null,
                         timestamp: parsed.timestamp
                     };
                 }
@@ -713,24 +749,22 @@ async function refreshMarkets() {
         for (const asset of ASSETS) {
             for (const tf of TIMEFRAMES) {
                 // Toujours essayer de récupérer par slug attendu en premier
-                const expectedSlug = generateExpectedSlug(asset, tf, now);
-                if (expectedSlug) {
-                    try {
-                        const response = await fetch(`https://gamma-api.polymarket.com/events/slug/${expectedSlug}`);
-                        if (response.ok) {
-                            const event = await response.json();
-                            if (event && event.markets && Array.isArray(event.markets) && event.markets.length > 0) {
-                                for (const inner of event.markets) {
-                                    if (inner?.clobTokenIds) {
-                                        try {
-                                            const arr = typeof inner.clobTokenIds === 'string' ? JSON.parse(inner.clobTokenIds) : inner.clobTokenIds;
-                                            if (Array.isArray(arr) && arr.length >= 2) {
-                                                // Extraire le timestamp depuis le slug
-                                                const parsed = parseSlug(expectedSlug, asset);
-                                                if (parsed) {
-                                                    // Pour m15, on vérifie que le marché est vraiment actif
-                                                    // Pour h1 et daily, on fait confiance à generateExpectedSlug
-                                                    if (tf === 'm15') {
+                    const expectedSlug = generateExpectedSlug(asset, tf, now);
+                    if (expectedSlug) {
+                        try {
+                            const response = await fetch(`https://gamma-api.polymarket.com/events/slug/${expectedSlug}`);
+                            if (response.ok) {
+                                const event = await response.json();
+                                if (event && event.markets && Array.isArray(event.markets) && event.markets.length > 0) {
+                                    for (const inner of event.markets) {
+                                        if (inner?.clobTokenIds) {
+                                            try {
+                                                const arr = typeof inner.clobTokenIds === 'string' ? JSON.parse(inner.clobTokenIds) : inner.clobTokenIds;
+                                                if (Array.isArray(arr) && arr.length >= 2) {
+                                                    // Extraire le timestamp depuis le slug
+                                                    const parsed = parseSlug(expectedSlug, asset);
+                                                    if (parsed) {
+                                                    if (tf === 'm5' || tf === 'm15') {
                                                         const [isActive] = isActiveMarket(parsed, asset, tf, now);
                                                         if (!isActive) {
                                                             if (DEBUG_MODE) {
@@ -741,25 +775,27 @@ async function refreshMarkets() {
                                                         }
                                                     }
                                                     
-                                                    newMarkets[asset][tf] = {
-                                                        slug: expectedSlug,
-                                                        title: event.title,
-                                                        clobTokenIds: arr,
-                                                        timestamp: parsed.timestamp
-                                                    };
-                                                    clobCount++;
-                                                    activeCount++;
-                                                    break;
+                                                        newMarkets[asset][tf] = {
+                                                            slug: expectedSlug,
+                                                            title: event.title,
+                                                            clobTokenIds: arr,
+                                                            condition_id: inner?.condition_id || inner?.conditionId || null,
+                                                            event_id: event?.id ?? null,
+                                                            timestamp: parsed.timestamp
+                                                        };
+                                                        clobCount++;
+                                                        activeCount++;
+                                                        break;
+                                                    }
                                                 }
-                                            }
-                                        } catch (_) {}
+                                            } catch (_) {}
+                                        }
                                     }
                                 }
                             }
+                        } catch (err) {
+                            // Market doesn't exist yet, skip
                         }
-                    } catch (err) {
-                        // Market doesn't exist yet, skip
-                    }
                     
                     // Pré-charger la prochaine bougie si on est dans les dernières minutes/heures
                     const etFmt = new Intl.DateTimeFormat('en-US', {
@@ -773,11 +809,10 @@ async function refreshMarkets() {
                     const nowMi = parseInt(nowParts.find(p => p.type === 'minute')?.value || 0);
                     
                     let shouldPreload = false;
-                    
-                    if (tf === 'm15') {
-                        const minutesInCurrentBougie = nowMi % 15;
-                        // Si on est dans les 2 dernières minutes de la bougie (13-14 minutes), pré-charger la suivante
-                        shouldPreload = minutesInCurrentBougie >= 13;
+                    if (tf === 'm5') {
+                        shouldPreload = (nowMi % 5) >= 3;
+                    } else if (tf === 'm15') {
+                        shouldPreload = (nowMi % 15) >= 13;
                     } else if (tf === 'h1') {
                         // Si on est dans les 2 dernières minutes de l'heure (58-59 minutes), pré-charger la suivante
                         shouldPreload = nowMi >= 58;
@@ -806,6 +841,8 @@ async function refreshMarkets() {
                                                                 slug: nextSlug,
                                                                 title: nextEvent.title,
                                                                 clobTokenIds: arr,
+                                                                condition_id: inner?.condition_id || inner?.conditionId || null,
+                                                                event_id: nextEvent?.id ?? null,
                                                                 timestamp: parsed.timestamp
                                                             };
                                                             if (DEBUG_MODE) {
@@ -862,6 +899,8 @@ async function refreshMarkets() {
                     MARKETS[asset][tf] = newMarket;
                     ACTIVE_BOUGIES[asset][tf] = newMarket?.timestamp;
                     hasChanges = true;
+                    // Reset volumes WSS quand la bougie m5/m15 change
+                    if (tf === 'm5' || tf === 'm15') resetTradeVolumes(asset, tf);
                     
                     // Log uniquement si on a les CLOB (prochain pari exploitable)
                     if (newMarket?.clobTokenIds && newMarket.clobTokenIds.length >= 2) {
@@ -888,26 +927,222 @@ async function refreshMarkets() {
             });
         });
 
-        // No summary log
+        // Mettre à jour les souscriptions WSS Polymarket après changement de marchés
+        updatePolymarketSubscriptions();
 
     } catch (error) {
         console.error('✗ Erreur refreshMarkets:', error.message);
     }
 }
 
+const BINANCE_WS_URL = 'wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade';
+let binanceWS = null;
+
 /**
- * Récupère le prix spot depuis Binance
+ * Connecte le WebSocket Binance aggTrade et met à jour SPOT_STATE
  */
-async function getSpotPrice(asset) {
-    try {
-        const symbol = `${asset}USDT`;
-        const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
-        const data = await response.json();
-        return parseFloat(data.price);
-    } catch (error) {
-        console.error(`✗ Erreur prix spot ${asset}:`, error.message);
-        return null;
+function connectBinanceWSS() {
+    if (binanceWS) return;
+    binanceWS = new WebSocket(BINANCE_WS_URL);
+    binanceWS.on('open', async () => {
+        console.log(colors.green('✓ Binance WSS aggTrade connecté'));
+        // Primer les prix via REST au cas où on n'a pas encore reçu de trade
+        for (const asset of ASSETS) {
+            try {
+                const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${asset}USDT`);
+                const d = await r.json();
+                const p = parseFloat(d.price);
+                if (!isNaN(p) && SPOT_STATE[asset]) SPOT_STATE[asset].price = p;
+            } catch (_) {}
+        }
+    });
+    binanceWS.on('message', (raw) => {
+        try {
+            const msg = JSON.parse(raw.toString());
+            const stream = msg.stream || '';
+            const data = msg.data || msg;
+            const asset = stream.startsWith('btc') ? 'BTC' : stream.startsWith('eth') ? 'ETH' : null;
+            if (!asset || !SPOT_STATE[asset]) return;
+            const p = parseFloat(data.p);
+            const q = parseFloat(data.q);
+            if (!isNaN(p)) SPOT_STATE[asset].price = p;
+            if (!isNaN(q)) SPOT_STATE[asset].volumeSinceSnapshot += q;
+        } catch (_) {}
+    });
+    binanceWS.on('close', () => {
+        binanceWS = null;
+        console.log(colors.yellow('✗ Binance WSS déconnecté, reconnexion dans 5s...'));
+        setTimeout(connectBinanceWSS, 5000);
+    });
+    binanceWS.on('error', (err) => {
+        if (DEBUG_MODE) console.error(colors.red('[Binance WSS]'), err.message);
+    });
+}
+
+/** Lit le prix spot depuis l'état WSS (synchrone) */
+function getSpotPrice(asset) {
+    return SPOT_STATE[asset]?.price ?? null;
+}
+
+// ── Polymarket WebSocket (market channel) pour volumes en temps réel ──
+
+/**
+ * Reconstruit TOKEN_TO_INFO à partir des marchés actuels (m5 & m15).
+ * Appelé après chaque refreshMarkets.
+ */
+function rebuildTokenMap() {
+    // Vider le map
+    for (const k of Object.keys(TOKEN_TO_INFO)) delete TOKEN_TO_INFO[k];
+
+    for (const asset of ASSETS) {
+        for (const tf of ['m5', 'm15']) {
+            const market = MARKETS[asset]?.[tf];
+            if (!market?.clobTokenIds || market.clobTokenIds.length < 2) continue;
+            const upId = String(market.clobTokenIds[0]);
+            const downId = String(market.clobTokenIds[1]);
+            TOKEN_TO_INFO[upId] = { asset, tf, direction: 'up' };
+            TOKEN_TO_INFO[downId] = { asset, tf, direction: 'down' };
+        }
     }
+}
+
+/**
+ * Met à jour les souscriptions WebSocket Polymarket quand les marchés changent.
+ * Unsubscribe des anciens tokens, subscribe aux nouveaux, reset les volumes.
+ */
+function updatePolymarketSubscriptions() {
+    rebuildTokenMap();
+    const newTokenIds = Object.keys(TOKEN_TO_INFO);
+
+    if (!polymarketWS || polymarketWS.readyState !== WebSocket.OPEN) {
+        subscribedTokenIds = newTokenIds;
+        return;
+    }
+
+    // Unsubscribe des anciens tokens qui ne sont plus dans le map
+    const toUnsub = subscribedTokenIds.filter(id => !newTokenIds.includes(id));
+    if (toUnsub.length > 0) {
+        try {
+            polymarketWS.send(JSON.stringify({
+                assets_ids: toUnsub,
+                type: 'market'
+            }));
+        } catch (_) {}
+    }
+
+    // Subscribe aux nouveaux tokens
+    const toSub = newTokenIds.filter(id => !subscribedTokenIds.includes(id));
+    if (toSub.length > 0) {
+        try {
+            polymarketWS.send(JSON.stringify({
+                assets_ids: toSub,
+                type: 'market'
+            }));
+        } catch (_) {}
+    }
+
+    subscribedTokenIds = newTokenIds;
+
+    if (DEBUG_MODE) {
+        console.log(`${colors.cyan('[PM WSS]')} Tokens souscrits: ${newTokenIds.length} (sub: ${toSub.length}, unsub: ${toUnsub.length})`);
+    }
+}
+
+/**
+ * Reset les volumes accumulés pour un asset/timeframe (quand la bougie change).
+ */
+function resetTradeVolumes(asset, tf) {
+    if (TRADE_VOLUMES[asset] && TRADE_VOLUMES[asset][tf]) {
+        TRADE_VOLUMES[asset][tf] = { up: 0, down: 0 };
+    }
+    if (LAST_VOL_SNAPSHOT[asset] && LAST_VOL_SNAPSHOT[asset][tf]) {
+        LAST_VOL_SNAPSHOT[asset][tf] = { up: 0, down: 0 };
+    }
+}
+
+/**
+ * Connecte le WebSocket Polymarket (market channel) pour recevoir les trades en temps réel.
+ * Les events last_trade_price contiennent le size de chaque trade.
+ */
+function connectPolymarketWSS() {
+    if (polymarketWS) return;
+
+    polymarketWS = new WebSocket(POLYMARKET_WS_URL);
+
+    polymarketWS.on('open', () => {
+        console.log(colors.green('✓ Polymarket WSS market channel connecté'));
+
+        // Subscribe à tous les tokens connus
+        const tokenIds = Object.keys(TOKEN_TO_INFO);
+        if (tokenIds.length > 0) {
+            polymarketWS.send(JSON.stringify({
+                assets_ids: tokenIds,
+                type: 'market'
+            }));
+            subscribedTokenIds = tokenIds;
+            console.log(`${colors.cyan('[PM WSS]')} Souscrit à ${tokenIds.length} tokens`);
+        }
+
+        // Ping toutes les 10s pour garder la connexion active
+        if (polymarketPingInterval) clearInterval(polymarketPingInterval);
+        polymarketPingInterval = setInterval(() => {
+            if (polymarketWS && polymarketWS.readyState === WebSocket.OPEN) {
+                polymarketWS.send('PING');
+            }
+        }, 10000);
+    });
+
+    polymarketWS.on('message', (raw) => {
+        try {
+            const str = raw.toString();
+            if (str === 'PONG') return;
+
+            const msg = JSON.parse(str);
+
+            // Gérer les messages qui sont des arrays d'events
+            const events = Array.isArray(msg) ? msg : [msg];
+            for (const evt of events) {
+                if (evt.event_type === 'last_trade_price') {
+                    const tokenId = String(evt.asset_id || '');
+                    const info = TOKEN_TO_INFO[tokenId];
+                    if (!info) continue;
+
+                    const size = parseFloat(evt.size);
+                    if (isNaN(size) || size <= 0) continue;
+
+                    // Accumuler le volume
+                    if (TRADE_VOLUMES[info.asset] && TRADE_VOLUMES[info.asset][info.tf]) {
+                        TRADE_VOLUMES[info.asset][info.tf][info.direction] += size;
+                    }
+                }
+            }
+        } catch (_) {}
+    });
+
+    polymarketWS.on('close', (code, reason) => {
+        polymarketWS = null;
+        if (polymarketPingInterval) { clearInterval(polymarketPingInterval); polymarketPingInterval = null; }
+        console.log(colors.yellow(`✗ Polymarket WSS déconnecté (code: ${code}, reason: ${reason?.toString() || ''}), reconnexion dans 5s...`));
+        setTimeout(connectPolymarketWSS, 5000);
+    });
+
+    polymarketWS.on('error', (err) => {
+        console.error(colors.red('[PM WSS error]'), err.message);
+    });
+}
+
+/**
+ * Lit les volumes accumulés (synchrone) pour m5.
+ */
+function getM5Volumes(asset) {
+    return TRADE_VOLUMES[asset]?.m5 ?? { up: 0, down: 0 };
+}
+
+/**
+ * Lit les volumes accumulés (synchrone) pour m15.
+ */
+function getM15Volumes(asset) {
+    return TRADE_VOLUMES[asset]?.m15 ?? { up: 0, down: 0 };
 }
 
 /**
@@ -994,8 +1229,8 @@ async function collectData() {
     const rows = {};
     
     for (const asset of ASSETS) {
-        const spotPrice = await getSpotPrice(asset);
-        if (!spotPrice) continue;
+        const spotPrice = getSpotPrice(asset);
+        if (spotPrice == null) continue;
 
         rows[asset] = {
             timestamp: now.toISOString(),
@@ -1023,6 +1258,11 @@ async function collectData() {
                                 MARKETS[asset][tf] = nextMarket;
                                 ACTIVE_BOUGIES[asset][tf] = nextMarket.timestamp;
                                 NEXT_MARKETS[asset][tf] = null; // Nettoyer
+                                // Reset volumes WSS et mettre à jour souscriptions
+                                if (tf === 'm5' || tf === 'm15') {
+                                    resetTradeVolumes(asset, tf);
+                                    updatePolymarketSubscriptions();
+                                }
                                 if (DEBUG_MODE) {
                                     const colorFn = ASSET_COLORS[asset] || colors.white;
                                     console.log(`${colorFn(`[${asset}]`)} ${colors.green('→')} ${colors.cyan(tf)}: Switch automatique vers marché pré-chargé`);
@@ -1176,11 +1416,12 @@ async function collectData() {
             }
 
             // Assigner les prix avec les nouveaux noms de colonnes
-            // ask = prix pour acheter (BUY), bid = prix pour vendre (SELL)
-            row[`${tf}_up_ask`] = upBuyPrice !== null ? upBuyPrice.toFixed(2) : '';
-            row[`${tf}_up_bid`] = upSellPrice !== null ? upSellPrice.toFixed(2) : '';
-            row[`${tf}_down_ask`] = downBuyPrice !== null ? downBuyPrice.toFixed(2) : '';
-            row[`${tf}_down_bid`] = downSellPrice !== null ? downSellPrice.toFixed(2) : '';
+            // ask = prix pour acheter (SELL side, généralement plus élevé), bid = prix pour vendre (BUY side, généralement plus bas)
+            // Dans Polymarket CLOB: SELL side = prix pour acheter (ASK), BUY side = prix pour vendre (BID)
+            row[`${tf}_up_ask`] = upSellPrice !== null ? upSellPrice.toFixed(2) : '';
+            row[`${tf}_up_bid`] = upBuyPrice !== null ? upBuyPrice.toFixed(2) : '';
+            row[`${tf}_down_ask`] = downSellPrice !== null ? downSellPrice.toFixed(2) : '';
+            row[`${tf}_down_bid`] = downBuyPrice !== null ? downBuyPrice.toFixed(2) : '';
             
             if (upSellPrice !== null && downSellPrice !== null) {
                 row.hasAnyValidQuotes = true;
@@ -1193,16 +1434,55 @@ async function collectData() {
             }
         }
 
-        // Ajouter au buffer si on a un prix spot (même sans cotations CLOB)
-        // Toujours écrire les données pour avoir un historique complet
-        delete row.hasAnyValidQuotes; // Nettoyer avant de push
-        BUFFERS[asset].push(row);
+        // Volumes = delta depuis la dernière entrée CSV (calculé au moment du push)
+        const hasM5 = MARKETS[asset]?.m5?.clobTokenIds?.length >= 2;
+        const hasM15 = MARKETS[asset]?.m15?.clobTokenIds?.length >= 2;
+
+        delete row.hasAnyValidQuotes;
+
+        // On pousse uniquement si spot ou cotations (bid/ask) changent, pas quand seul le volume change
+        const fp = JSON.stringify({
+            spot_price: row.spot_price,
+            m5_up_ask: row.m5_up_ask, m5_up_bid: row.m5_up_bid,
+            m5_down_ask: row.m5_down_ask, m5_down_bid: row.m5_down_bid,
+            m15_up_ask: row.m15_up_ask, m15_up_bid: row.m15_up_bid,
+            m15_down_ask: row.m15_down_ask, m15_down_bid: row.m15_down_bid,
+            h1_up_ask: row.h1_up_ask, h1_up_bid: row.h1_up_bid,
+            h1_down_ask: row.h1_down_ask, h1_down_bid: row.h1_down_bid,
+            daily_up_ask: row.daily_up_ask, daily_up_bid: row.daily_up_bid,
+            daily_down_ask: row.daily_down_ask, daily_down_bid: row.daily_down_bid
+        });
+        const ts = now.getTime();
+        if (fp !== LAST_ROW[asset] && (ts - (LAST_PUSH_TS[asset] || 0)) >= 100) {
+            // Calcul du delta de volume depuis la dernière entrée
+            if (hasM5) {
+                const cur = getM5Volumes(asset);
+                const snap = LAST_VOL_SNAPSHOT[asset].m5;
+                row.m5_up_volume = Math.max(0, cur.up - snap.up);
+                row.m5_down_volume = Math.max(0, cur.down - snap.down);
+                LAST_VOL_SNAPSHOT[asset].m5 = { up: cur.up, down: cur.down };
+            } else {
+                row.m5_up_volume = '';
+                row.m5_down_volume = '';
+            }
+            if (hasM15) {
+                const cur = getM15Volumes(asset);
+                const snap = LAST_VOL_SNAPSHOT[asset].m15;
+                row.m15_up_volume = Math.max(0, cur.up - snap.up);
+                row.m15_down_volume = Math.max(0, cur.down - snap.down);
+                LAST_VOL_SNAPSHOT[asset].m15 = { up: cur.up, down: cur.down };
+            } else {
+                row.m15_up_volume = '';
+                row.m15_down_volume = '';
+            }
+
+            BUFFERS[asset].push(row);
+            LAST_ROW[asset] = fp;
+            LAST_PUSH_TS[asset] = ts;
+        }
     }
-    
-    // Si un marché n'était plus actif, rafraîchir les marchés
-    if (needRefresh) {
-        await refreshMarkets();
-    }
+
+    if (needRefresh) await refreshMarkets();
 }
 
 /**
@@ -1223,24 +1503,30 @@ async function flushToCSV() {
 
         const csvPath = path.join(DATA_DIR, `${asset}.csv`);
         const lines = [];
-
-        // Si le fichier n'existe pas, ajouter l'en-tête
         if (!fs.existsSync(csvPath)) {
-            const header = 'timestamp,spot_price,m15_up_ask,m15_up_bid,m15_down_ask,m15_down_bid,h1_up_ask,h1_up_bid,h1_down_ask,h1_down_bid,daily_up_ask,daily_up_bid,daily_down_ask,daily_down_bid';
+            const header = 'timestamp,spot_price,m5_up_ask,m5_up_bid,m5_down_ask,m5_down_bid,m5_up_volume,m5_down_volume,m15_up_ask,m15_up_bid,m15_down_ask,m15_down_bid,m15_up_volume,m15_down_volume,h1_up_ask,h1_up_bid,h1_down_ask,h1_down_bid,daily_up_ask,daily_up_bid,daily_down_ask,daily_down_bid';
             lines.push(header);
         }
 
-        // Ajouter les nouvelles lignes
+        const cleanValue = (val) => (val !== undefined && val !== null && val !== '' && String(val) !== 'NaN') ? String(val) : '';
+        const spotDecimals = 2;
         for (const row of buffer) {
-            const cleanValue = (val) => (val && val !== 'NaN' && val !== null) ? val : '';
-            const spotDecimals = 2;
+            const vol = (v) => (typeof v === 'number' && !isNaN(v)) ? v.toFixed(2) : cleanValue(v);
             const line = [
                 row.timestamp,
-                row.spot_price.toFixed(spotDecimals),
+                row.spot_price != null ? Number(row.spot_price).toFixed(spotDecimals) : '',
+                cleanValue(row.m5_up_ask),
+                cleanValue(row.m5_up_bid),
+                cleanValue(row.m5_down_ask),
+                cleanValue(row.m5_down_bid),
+                vol(row.m5_up_volume),
+                vol(row.m5_down_volume),
                 cleanValue(row.m15_up_ask),
                 cleanValue(row.m15_up_bid),
                 cleanValue(row.m15_down_ask),
                 cleanValue(row.m15_down_bid),
+                vol(row.m15_up_volume),
+                vol(row.m15_down_volume),
                 cleanValue(row.h1_up_ask),
                 cleanValue(row.h1_up_bid),
                 cleanValue(row.h1_down_ask),
@@ -1253,18 +1539,15 @@ async function flushToCSV() {
             lines.push(line);
         }
 
-        // Écrire dans le fichier
         fs.appendFileSync(csvPath, lines.join('\n') + '\n');
-        
-        // Log coloré par asset
+
         const colorFn = ASSET_COLORS[asset] || colors.white;
         const assetStr = colorFn(`[${asset}]`);
         console.log(`${assetStr} ${colors.green('✓')} Écrit ${colors.yellow(buffer.length)} lignes dans ${colors.white(asset + '.csv')}`);
 
-        // Vider le buffer
         BUFFERS[asset] = [];
     }
-    
+
     console.log(colors.green('[FLUSH] ✓ Terminé\n'));
 }
 
@@ -1283,29 +1566,31 @@ async function main() {
         console.log(`${colors.bold('Mode:')} ${colors.yellow('DEBUG')} (affichage des URLs)\n`);
     }
 
-    // Référencement initial des marchés
     await refreshMarkets();
+    connectBinanceWSS();
+    connectPolymarketWSS();
 
     // Essayer d'obtenir tous les timeframes au démarrage (quelques tentatives rapides)
     let tries = 0;
-    const needAll = () => ASSETS.every(a => TIMEFRAMES.every(tf => MARKETS[a][tf]?.clobTokenIds && MARKETS[a][tf].clobTokenIds.length >= 2));
+    const requiredTf = ['m15', 'h1', 'daily']; // m5 optionnel (peut ne pas exister pour tous les assets)
+    const needAll = () => ASSETS.every(a => requiredTf.every(tf => MARKETS[a][tf]?.clobTokenIds && MARKETS[a][tf].clobTokenIds.length >= 2));
     while (!needAll() && tries < 5) {
         await new Promise(r => setTimeout(r, 2000));
         await refreshMarkets();
         tries += 1;
     }
 
-    // Tick toutes les 500ms (2 fois par seconde)
+    // Tick toutes les 100ms (10 fois par seconde)
     setInterval(async () => {
         await collectData();
-    }, 500);
+    }, 100);
 
     // Flush toutes les 60 secondes
     setInterval(async () => {
         await flushToCSV();
     }, 60000);
 
-    console.log(colors.green('✓ Logging démarré') + colors.gray(' (tick: 500ms, flush: 60s)\n'));
+    console.log(colors.green('✓ Logging démarré') + colors.gray(' (tick: 100ms, flush: 60s)\n'));
 }
 
 // Gestion des erreurs non catchées
