@@ -937,6 +937,9 @@ async function refreshMarkets() {
 
 const BINANCE_WS_URL = 'wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade';
 let binanceWS = null;
+let binanceLastMessageAt = 0;
+const BINANCE_SILENCE_RECONNECT_MS = 60 * 1000; // 1 min sans data → reco
+let binanceWatchdogInterval = null;
 
 /**
  * Connecte le WebSocket Binance aggTrade et met à jour SPOT_STATE
@@ -945,6 +948,7 @@ function connectBinanceWSS() {
     if (binanceWS) return;
     binanceWS = new WebSocket(BINANCE_WS_URL);
     binanceWS.on('open', async () => {
+        binanceLastMessageAt = Date.now();
         console.log(colors.green('✓ Binance WSS aggTrade connecté'));
         // Primer les prix via REST au cas où on n'a pas encore reçu de trade
         for (const asset of ASSETS) {
@@ -955,8 +959,18 @@ function connectBinanceWSS() {
                 if (!isNaN(p) && SPOT_STATE[asset]) SPOT_STATE[asset].price = p;
             } catch (_) {}
         }
+        // Watchdog: si pas de message depuis 1 min, forcer reco
+        if (binanceWatchdogInterval) clearInterval(binanceWatchdogInterval);
+        binanceWatchdogInterval = setInterval(() => {
+            if (!binanceWS || binanceWS.readyState !== WebSocket.OPEN) return;
+            if (Date.now() - binanceLastMessageAt > BINANCE_SILENCE_RECONNECT_MS) {
+                console.log(colors.yellow('✗ Binance WSS: aucune data depuis 1 min, reconnexion...'));
+                binanceWS.terminate();
+            }
+        }, 30000); // check toutes les 30s
     });
     binanceWS.on('message', (raw) => {
+        binanceLastMessageAt = Date.now();
         try {
             const msg = JSON.parse(raw.toString());
             const stream = msg.stream || '';
@@ -971,6 +985,7 @@ function connectBinanceWSS() {
     });
     binanceWS.on('close', () => {
         binanceWS = null;
+        if (binanceWatchdogInterval) { clearInterval(binanceWatchdogInterval); binanceWatchdogInterval = null; }
         console.log(colors.yellow('✗ Binance WSS déconnecté, reconnexion dans 5s...'));
         setTimeout(connectBinanceWSS, 5000);
     });
