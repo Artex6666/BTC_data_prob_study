@@ -1,0 +1,89 @@
+=== PORTFOLIO LIVE BTC + ETH ===
+
+── Scénario A : sizing dynamique (maxDD combiné = $500) ──
+  BTC (A)
+    Trades    : 2451  WR=95.5%
+    PnL total : $22,532  ($777/j)
+    MaxDD     : $500
+    RF (PnL_total / maxDD) : 45.1x
+    Sizing    : $96/ordre × 2 ordres
+
+  ETH (A)
+    Trades    : 348  WR=97.4%
+    PnL total : $2,562  ($88/j)
+    MaxDD     : $96
+    RF (PnL_total / maxDD) : 26.7x
+    Sizing    : $96/ordre × 1 ordres
+
+  BTC+ETH (A)
+    Trades    : 2799  WR=95.7%
+    PnL total : $25,094  ($865/j)
+    MaxDD     : $500
+    RF (PnL_total / maxDD) : 50.2x
+    Sizing    : $96/ordre × 2 ordres
+
+
+── Scénario B : sizing fixe ACTUEL (BTC $100×2, ETH $150×1) ──
+  BTC (B)
+    Trades    : 2451  WR=95.5%
+    PnL total : $23,516  ($811/j)
+    MaxDD     : $522
+    RF (PnL_total / maxDD) : 45.1x
+    Sizing    : $100/ordre × 2 ordres
+
+  ETH (B)
+    Trades    : 348  WR=97.4%
+    PnL total : $4,011  ($138/j)
+    MaxDD     : $150
+    RF (PnL_total / maxDD) : 26.7x
+    Sizing    : $150/ordre × 1 ordres
+
+  BTC+ETH (B)
+    Trades    : 2799  WR=95.7%
+    PnL total : $27,528  ($949/j)
+    MaxDD     : $522
+    RF (PnL_total / maxDD) : 52.7x
+    Sizing    : $0/ordre × 0 ordres
+
+
+── Scénario C : sizing recommandé (BTC $80×2, ETH $340×2) ──
+  BTC (C)
+    Trades    : 2451  WR=95.5%
+    PnL total : $18,813  ($649/j)
+    MaxDD     : $417
+    RF (PnL_total / maxDD) : 45.1x
+    Sizing    : $80/ordre × 2 ordres
+
+  ETH (C)
+    Trades    : 348  WR=97.4%
+    PnL total : $9,092  ($314/j)
+    MaxDD     : $340
+    RF (PnL_total / maxDD) : 26.7x
+    Sizing    : $340/ordre × 1 ordres
+
+  BTC+ETH (C)
+    Trades    : 2799  WR=95.7%
+    PnL total : $27,905  ($962/j)
+    MaxDD     : $563
+    RF (PnL_total / maxDD) : 49.6x
+    Sizing    : $0/ordre × 0 ordres
+
+
+=== RECOMMANDATION SIZING ===
+  Corrélation PnL horaire BTC↔ETH : 0.001
+  Sharpe horaire BTC : 0.3434  ETH : 0.2294
+  RF BTC : 45.1x  RF ETH : 26.7x
+  Ratio Sharpe BTC/ETH : 1.50
+
+  Allocation min-variance  : BTC 10%  /  ETH 90%
+  Allocation max-Sharpe    : BTC 60%  /  ETH 40%
+
+  Interprétation :
+  Les deux stratégies sont peu corrélées → diversification efficace.
+  Répartition optimale proche de min-variance.
+
+  Répartition recommandée : BTC 35%  /  ETH 65%
+  Exemple pour $500 cible exposure : BTC $175  ETH $325
+
+  Note sizing fixe actuel : BTC $100×2=$200  ETH $150×1=$150 → 57% / 43%
+  vs recommandé           : BTC 35%  ETH 65%

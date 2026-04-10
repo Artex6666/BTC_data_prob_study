@@ -1,0 +1,221 @@
+ETH Curve Optimizer v1  —  Tri RF  |  Date: 2026-03-29 03:25  |  Data: 11.7j  |  Configs: 1187/1187  |  309s
+ATTENTION : 12 jours seulement — resultats a valider sur plus de donnees
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+>>> LINEAR — top 15 par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1       linear   sl=0.100 int=0.5 cap=0.80 cb=-               - | T= 426 WR= 98.6% $ 108.9/j | loseDay= 2/11 wrstDay=$  -5.63 maxDD=$     6 RF= 226.2x
+  2       linear   sl=0.100 int=2.0 cap=0.65 cb=-               - | T=  44 WR=100.0% $  14.8/j | loseDay= 0/11 wrstDay=$   5.16 maxDD=$     0 RF=   inf 
+  3       linear   sl=0.100 int=2.0 cap=0.70 cb=-               - | T=  44 WR=100.0% $  14.8/j | loseDay= 0/11 wrstDay=$   5.16 maxDD=$     0 RF=   inf 
+  4       linear   sl=0.100 int=2.0 cap=0.80 cb=-               - | T=  44 WR=100.0% $  10.5/j | loseDay= 0/11 wrstDay=$   3.58 maxDD=$     0 RF=   inf 
+  5       linear   sl=0.100 int=2.0 cap=0.85 cb=-               - | T=  44 WR=100.0% $  10.5/j | loseDay= 0/11 wrstDay=$   3.58 maxDD=$     0 RF=   inf 
+  6       linear   sl=0.100 int=2.0 cap=0.90 cb=-               - | T=  44 WR=100.0% $   9.0/j | loseDay= 0/11 wrstDay=$   3.58 maxDD=$     0 RF=   inf 
+  7       linear   sl=0.200 int=2.0 cap=0.65 cb=-               - | T=  13 WR=100.0% $   7.1/j | loseDay= 0/11 wrstDay=$   0.51 maxDD=$     0 RF=   inf 
+  8       linear   sl=0.200 int=2.0 cap=0.70 cb=-               - | T=  13 WR=100.0% $   7.1/j | loseDay= 0/11 wrstDay=$   0.51 maxDD=$     0 RF=   inf 
+  9       linear   sl=0.100 int=0.5 cap=0.65 cb=-               - | T= 434 WR= 97.9% $ 125.3/j | loseDay= 3/11 wrstDay=$ -29.08 maxDD=$    30 RF=  48.3x
+ 10       linear   sl=0.200 int=2.0 cap=0.80 cb=-               - | T=  13 WR=100.0% $   2.8/j | loseDay= 0/11 wrstDay=$   0.51 maxDD=$     0 RF=   inf 
+ 11       linear   sl=0.200 int=2.0 cap=0.85 cb=-               - | T=  13 WR=100.0% $   2.8/j | loseDay= 0/11 wrstDay=$   0.51 maxDD=$     0 RF=   inf 
+ 12       linear   sl=0.200 int=2.0 cap=0.90 cb=-               - | T=  13 WR=100.0% $   2.8/j | loseDay= 0/11 wrstDay=$   0.51 maxDD=$     0 RF=   inf 
+ 13       linear   sl=0.100 int=0.5 cap=0.70 cb=-               - | T= 431 WR= 98.4% $ 121.7/j | loseDay= 3/11 wrstDay=$ -29.08 maxDD=$    57 RF=  24.9x
+ 14       linear   sl=0.100 int=0.5 cap=0.85 cb=-               - | T= 419 WR= 98.8% $ 100.6/j | loseDay= 1/11 wrstDay=$ -56.70 maxDD=$    57 RF=  20.7x
+ 15       linear   sl=0.200 int=0.0 cap=0.85 cb=-               - | T= 397 WR= 98.2% $ 119.8/j | loseDay= 3/11 wrstDay=$ -75.64 maxDD=$    85 RF=  16.6x
+
+>>> EXPO — top 15 par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1         expo        A=2.00 t=20 cap=0.65 cb=-               - | T= 794 WR= 95.2% $ 211.2/j | loseDay= 3/11 wrstDay=$-351.80 maxDD=$   611 RF=   4.0x
+  2         expo        A=0.50 t=40 cap=0.65 cb=-               - | T=2538 WR= 90.7% $ 261.4/j | loseDay= 4/11 wrstDay=$-781.98 maxDD=$   828 RF=   3.7x
+  3         expo        A=2.00 t=40 cap=0.65 cb=-               - | T=1571 WR= 94.0% $ 209.0/j | loseDay= 4/11 wrstDay=$-565.15 maxDD=$   763 RF=   3.2x
+  4         expo        A=1.00 t=20 cap=0.65 cb=-               - | T=1301 WR= 93.9% $ 197.2/j | loseDay= 5/11 wrstDay=$-562.37 maxDD=$   943 RF=   2.4x
+  5         expo        A=2.00 t=20 cap=0.70 cb=-               - | T= 783 WR= 95.4% $ 150.7/j | loseDay= 3/11 wrstDay=$-439.39 maxDD=$   764 RF=   2.3x
+  6         expo        A=2.00 t=20 cap=0.80 cb=-               - | T= 763 WR= 96.1% $  84.5/j | loseDay= 4/11 wrstDay=$-447.90 maxDD=$   448 RF=   2.2x
+  7         expo        A=1.00 t=20 cap=0.70 cb=-               - | T=1288 WR= 94.3% $ 147.4/j | loseDay= 5/11 wrstDay=$-523.39 maxDD=$   950 RF=   1.8x
+  8         expo        A=2.00 t=40 cap=0.70 cb=-               - | T=1559 WR= 94.3% $ 142.6/j | loseDay= 5/11 wrstDay=$-676.16 maxDD=$   920 RF=   1.8x
+  9         expo        A=1.00 t=20 cap=0.85 cb=-               - | T=1241 WR= 95.8% $  71.0/j | loseDay= 6/11 wrstDay=$-407.33 maxDD=$   571 RF=   1.5x
+ 10         expo        A=1.00 t=60 cap=0.65 cb=-               - | T=2515 WR= 90.9% $ 166.2/j | loseDay= 5/11 wrstDay=$-1052.62 maxDD=$  1488 RF=   1.3x
+ 11         expo        A=0.50 t=40 cap=0.70 cb=-               - | T=2531 WR= 90.9% $ 110.2/j | loseDay= 6/11 wrstDay=$-1020.37 maxDD=$  1144 RF=   1.1x
+ 12         expo        A=2.00 t=20 cap=0.85 cb=-               - | T= 746 WR= 96.1% $  36.9/j | loseDay= 5/11 wrstDay=$-392.89 maxDD=$   464 RF=   0.9x
+ 13         expo        A=1.00 t=20 cap=0.80 cb=-               - | T=1262 WR= 95.0% $  69.0/j | loseDay= 6/11 wrstDay=$-477.98 maxDD=$   896 RF=   0.9x
+ 14         expo        A=2.00 t=20 cap=0.90 cb=-               - | T= 714 WR= 96.9% $  31.8/j | loseDay= 4/11 wrstDay=$-315.46 maxDD=$   415 RF=   0.9x
+ 15         expo        A=2.00 t=40 cap=0.85 cb=-               - | T=1510 WR= 95.7% $  49.2/j | loseDay= 6/11 wrstDay=$-455.52 maxDD=$   698 RF=   0.8x
+
+>>> CB_LINEAR — top 15 par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1    cb_linear   sl=0.100 int=0.0 cap=0.65 cb=1               - | T= 848 WR= 96.0% $ 236.1/j | loseDay= 2/11 wrstDay=$-463.17 maxDD=$   522 RF=   5.3x
+  2    cb_linear   sl=0.050 int=0.0 cap=0.65 cb=1               - | T=1246 WR= 94.5% $ 245.1/j | loseDay= 3/11 wrstDay=$-584.82 maxDD=$   585 RF=   4.9x
+  3    cb_linear   sl=0.050 int=0.0 cap=0.85 cb=1               - | T=1352 WR= 96.1% $ 144.6/j | loseDay= 4/11 wrstDay=$-443.98 maxDD=$   444 RF=   3.8x
+  4    cb_linear   sl=0.100 int=0.0 cap=0.65 cb=2               - | T=1036 WR= 95.5% $ 199.0/j | loseDay= 3/11 wrstDay=$-485.41 maxDD=$   755 RF=   3.1x
+  5    cb_linear   sl=0.100 int=1.0 cap=0.85 cb=2               - | T= 170 WR= 98.8% $  26.6/j | loseDay= 2/11 wrstDay=$-121.30 maxDD=$   121 RF=   2.6x
+  6    cb_linear   sl=0.050 int=1.0 cap=0.90 cb=2               - | T= 543 WR= 98.0% $  57.0/j | loseDay= 3/11 wrstDay=$-161.60 maxDD=$   260 RF=   2.6x
+  7    cb_linear   sl=0.100 int=1.0 cap=0.85 cb=1               - | T= 169 WR= 98.8% $  26.5/j | loseDay= 2/11 wrstDay=$-122.32 maxDD=$   122 RF=   2.5x
+  8    cb_linear   sl=0.050 int=1.0 cap=0.85 cb=1               - | T= 494 WR= 97.6% $  56.3/j | loseDay= 4/11 wrstDay=$-188.78 maxDD=$   270 RF=   2.4x
+  9    cb_linear   sl=0.050 int=1.0 cap=0.90 cb=1               - | T= 509 WR= 98.0% $  58.3/j | loseDay= 3/11 wrstDay=$-188.78 maxDD=$   289 RF=   2.4x
+ 10    cb_linear   sl=0.100 int=0.0 cap=0.90 cb=1               - | T= 867 WR= 97.3% $  68.0/j | loseDay= 6/11 wrstDay=$-259.63 maxDD=$   340 RF=   2.3x
+ 11    cb_linear   sl=0.050 int=1.0 cap=0.85 cb=2               - | T= 539 WR= 97.4% $  47.4/j | loseDay= 4/11 wrstDay=$-161.43 maxDD=$   241 RF=   2.3x
+ 12    cb_linear   sl=0.050 int=1.0 cap=0.65 cb=1               - | T= 485 WR= 97.3% $  50.9/j | loseDay= 4/11 wrstDay=$-188.78 maxDD=$   332 RF=   1.8x
+ 13    cb_linear   sl=0.050 int=0.0 cap=0.65 cb=2               - | T=1726 WR= 93.9% $ 123.5/j | loseDay= 4/11 wrstDay=$-965.64 maxDD=$   966 RF=   1.5x
+ 14    cb_linear   sl=0.100 int=1.0 cap=0.90 cb=2               - | T= 167 WR= 98.8% $  16.5/j | loseDay= 2/11 wrstDay=$-140.62 maxDD=$   141 RF=   1.4x
+ 15    cb_linear   sl=0.100 int=1.0 cap=0.90 cb=1               - | T= 166 WR= 98.8% $  16.4/j | loseDay= 2/11 wrstDay=$-141.64 maxDD=$   142 RF=   1.4x
+
+>>> VOL_LINEAR — top 15 par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1   vol_linear   sl=0.200 int=1.0 cap=0.65 cb=- ran8h>$40 | T=  34 WR=100.0% $  16.6/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+  2   vol_linear   sl=0.200 int=1.0 cap=0.70 cb=- ran8h>$40 | T=  33 WR=100.0% $  14.3/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+  3   vol_linear   sl=0.200 int=1.0 cap=0.80 cb=- ran8h>$40 | T=  33 WR=100.0% $  12.6/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+  4   vol_linear   sl=0.200 int=1.0 cap=0.65 cb=- ran4h>$40 | T=  22 WR=100.0% $  12.2/j | loseDay= 0/11 wrstDay=$   7.37 maxDD=$     0 RF=   inf 
+  5   vol_linear   sl=0.200 int=1.0 cap=0.70 cb=- ran4h>$40 | T=  22 WR=100.0% $  11.9/j | loseDay= 0/11 wrstDay=$   7.37 maxDD=$     0 RF=   inf 
+  6   vol_linear   sl=0.200 int=1.0 cap=0.85 cb=- ran8h>$40 | T=  33 WR=100.0% $  11.6/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+  7   vol_linear   sl=0.200 int=1.0 cap=0.80 cb=- ran4h>$40 | T=  22 WR=100.0% $  10.2/j | loseDay= 0/11 wrstDay=$   7.37 maxDD=$     0 RF=   inf 
+  8   vol_linear   sl=0.200 int=1.0 cap=0.85 cb=- ran4h>$40 | T=  22 WR=100.0% $   9.1/j | loseDay= 0/11 wrstDay=$   7.37 maxDD=$     0 RF=   inf 
+  9   vol_linear   sl=0.200 int=1.0 cap=0.90 cb=- ran8h>$40 | T=  32 WR=100.0% $   8.9/j | loseDay= 0/11 wrstDay=$   1.52 maxDD=$     0 RF=   inf 
+ 10   vol_linear   sl=0.200 int=1.0 cap=0.90 cb=- ran4h>$40 | T=  21 WR=100.0% $   6.5/j | loseDay= 0/11 wrstDay=$   1.52 maxDD=$     0 RF=   inf 
+ 11   vol_linear   sl=0.200 int=0.0 cap=0.70 cb=- ran4h>$15 | T= 393 WR= 97.2% $ 184.6/j | loseDay= 2/11 wrstDay=$ -22.25 maxDD=$    37 RF=  58.6x
+ 12   vol_linear   sl=0.200 int=0.0 cap=0.85 cb=- ran4h>$15 | T= 364 WR= 98.4% $ 117.9/j | loseDay= 2/11 wrstDay=$ -30.82 maxDD=$    31 RF=  44.7x
+ 13   vol_linear   sl=0.200 int=0.0 cap=0.80 cb=- ran4h>$15 | T= 379 WR= 97.9% $ 134.5/j | loseDay= 2/11 wrstDay=$ -31.21 maxDD=$    44 RF=  35.5x
+ 14   vol_linear   sl=0.200 int=0.0 cap=0.65 cb=- ran4h>$15 | T= 407 WR= 95.8% $ 191.9/j | loseDay= 2/11 wrstDay=$ -49.79 maxDD=$    94 RF=  23.8x
+ 15   vol_linear   sl=0.200 int=0.0 cap=0.70 cb=- ran4h>$25 | T= 303 WR= 97.0% $ 143.6/j | loseDay= 2/11 wrstDay=$ -79.90 maxDD=$    90 RF=  18.6x
+
+>>> VOL_EXPO — top 15 par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1     vol_expo        A=2.00 t=20 cap=0.65 cb=- ran4h>$25 | T= 528 WR= 94.9% $ 162.7/j | loseDay= 3/11 wrstDay=$ -73.80 maxDD=$    74 RF=  25.8x
+  2     vol_expo        A=1.00 t=20 cap=0.70 cb=- ran4h>$25 | T= 826 WR= 93.8% $ 137.7/j | loseDay= 3/11 wrstDay=$-108.05 maxDD=$   108 RF=  14.9x
+  3     vol_expo        A=1.00 t=20 cap=0.65 cb=- ran4h>$25 | T= 833 WR= 93.4% $ 176.6/j | loseDay= 3/11 wrstDay=$-163.43 maxDD=$   163 RF=  12.6x
+  4     vol_expo        A=1.00 t=20 cap=0.65 cb=- ran4h>$40 | T= 398 WR= 94.2% $ 107.6/j | loseDay= 3/11 wrstDay=$-100.44 maxDD=$   100 RF=  12.5x
+  5     vol_expo        A=2.00 t=20 cap=0.65 cb=- ran4h>$40 | T= 253 WR= 95.7% $ 101.7/j | loseDay= 2/11 wrstDay=$-126.27 maxDD=$   126 RF=   9.4x
+  6     vol_expo        A=2.00 t=20 cap=0.70 cb=- ran4h>$25 | T= 520 WR= 95.2% $ 114.8/j | loseDay= 3/11 wrstDay=$-152.72 maxDD=$   153 RF=   8.8x
+  7     vol_expo        A=1.00 t=20 cap=0.85 cb=- ran8h>$40 | T= 752 WR= 96.3% $ 116.2/j | loseDay= 3/11 wrstDay=$-243.19 maxDD=$   243 RF=   5.6x
+  8     vol_expo        A=2.00 t=20 cap=0.70 cb=- ran4h>$40 | T= 250 WR= 95.6% $  68.3/j | loseDay= 2/11 wrstDay=$-146.11 maxDD=$   146 RF=   5.5x
+  9     vol_expo        A=2.00 t=40 cap=0.70 cb=- ran4h>$25 | T=1016 WR= 93.9% $ 130.6/j | loseDay= 3/11 wrstDay=$-291.26 maxDD=$   291 RF=   5.2x
+ 10     vol_expo        A=2.00 t=40 cap=0.65 cb=- ran4h>$25 | T=1021 WR= 93.6% $ 167.0/j | loseDay= 3/11 wrstDay=$-239.97 maxDD=$   395 RF=   4.9x
+ 11     vol_expo        A=1.00 t=20 cap=0.70 cb=- ran4h>$40 | T= 395 WR= 94.4% $  82.4/j | loseDay= 3/11 wrstDay=$-223.84 maxDD=$   224 RF=   4.3x
+ 12     vol_expo        A=1.00 t=20 cap=0.85 cb=- ran4h>$25 | T= 792 WR= 95.7% $  78.9/j | loseDay= 4/11 wrstDay=$-218.85 maxDD=$   219 RF=   4.2x
+ 13     vol_expo        A=2.00 t=40 cap=0.65 cb=- ran8h>$40 | T= 972 WR= 94.3% $ 195.6/j | loseDay= 4/11 wrstDay=$-580.14 maxDD=$   580 RF=   3.9x
+ 14     vol_expo        A=2.00 t=20 cap=0.65 cb=- ran4h>$15 | T= 703 WR= 94.9% $ 170.3/j | loseDay= 3/11 wrstDay=$-288.33 maxDD=$   548 RF=   3.6x
+ 15     vol_expo        A=2.00 t=20 cap=0.65 cb=- ran8h>$15 | T= 760 WR= 95.0% $ 185.7/j | loseDay= 3/11 wrstDay=$-351.80 maxDD=$   611 RF=   3.6x
+
+>>> VOL_CB — top 15 par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1       vol_cb   sl=0.100 int=0.0 cap=0.65 cb=1 ran4h>$40 | T= 278 WR= 95.7% $  76.9/j | loseDay= 3/11 wrstDay=$ -44.26 maxDD=$    44 RF=  20.3x
+  2       vol_cb   sl=0.050 int=1.0 cap=0.85 cb=1 ran8h>$40 | T= 385 WR= 97.9% $  64.7/j | loseDay= 2/11 wrstDay=$ -38.76 maxDD=$    39 RF=  19.5x
+  3       vol_cb   sl=0.100 int=0.0 cap=0.65 cb=1 ran4h>$25 | T= 573 WR= 95.6% $ 164.2/j | loseDay= 1/11 wrstDay=$ -99.39 maxDD=$    99 RF=  19.3x
+  4       vol_cb   sl=0.050 int=1.0 cap=0.90 cb=1 ran8h>$40 | T= 402 WR= 98.5% $  72.4/j | loseDay= 2/11 wrstDay=$ -51.73 maxDD=$    52 RF=  16.4x
+  5       vol_cb   sl=0.050 int=0.0 cap=0.65 cb=1 ran4h>$25 | T= 817 WR= 94.2% $ 181.6/j | loseDay= 3/11 wrstDay=$-159.81 maxDD=$   160 RF=  13.3x
+  6       vol_cb   sl=0.100 int=0.0 cap=0.65 cb=2 ran4h>$25 | T= 717 WR= 95.4% $ 167.7/j | loseDay= 2/11 wrstDay=$-157.25 maxDD=$   157 RF=  12.5x
+  7       vol_cb   sl=0.100 int=0.0 cap=0.85 cb=1 ran4h>$25 | T= 589 WR= 96.6% $  69.4/j | loseDay= 3/11 wrstDay=$ -54.72 maxDD=$    67 RF=  12.2x
+  8       vol_cb   sl=0.100 int=0.0 cap=0.65 cb=1 ran4h>$15 | T= 750 WR= 95.9% $ 207.7/j | loseDay= 2/11 wrstDay=$-178.36 maxDD=$   230 RF=  10.5x
+  9       vol_cb   sl=0.100 int=0.0 cap=0.90 cb=1 ran4h>$25 | T= 614 WR= 97.9% $  90.4/j | loseDay= 1/11 wrstDay=$-103.87 maxDD=$   104 RF=  10.2x
+ 10       vol_cb   sl=0.050 int=1.0 cap=0.85 cb=1 ran4h>$25 | T= 422 WR= 97.9% $  69.6/j | loseDay= 3/11 wrstDay=$ -88.27 maxDD=$    88 RF=   9.2x
+ 11       vol_cb   sl=0.050 int=0.0 cap=0.65 cb=1 ran8h>$40 | T= 783 WR= 95.0% $ 248.3/j | loseDay= 2/11 wrstDay=$-345.14 maxDD=$   345 RF=   8.4x
+ 12       vol_cb   sl=0.050 int=1.0 cap=0.90 cb=1 ran4h>$25 | T= 437 WR= 98.4% $  73.1/j | loseDay= 2/11 wrstDay=$-107.59 maxDD=$   108 RF=   7.9x
+ 13       vol_cb   sl=0.050 int=1.0 cap=0.65 cb=1 ran8h>$40 | T= 383 WR= 97.9% $  69.7/j | loseDay= 3/11 wrstDay=$-103.70 maxDD=$   104 RF=   7.9x
+ 14       vol_cb   sl=0.100 int=0.0 cap=0.90 cb=1 ran8h>$40 | T= 552 WR= 97.5% $  72.5/j | loseDay= 3/11 wrstDay=$ -57.44 maxDD=$   109 RF=   7.8x
+ 15       vol_cb   sl=0.100 int=0.0 cap=0.85 cb=1 ran8h>$40 | T= 554 WR= 96.9% $  93.6/j | loseDay= 3/11 wrstDay=$ -82.69 maxDD=$   148 RF=   7.4x
+
+>>> VOL_NET_LIN — top 15 par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1  vol_net_lin   sl=0.200 int=0.0 cap=0.65 cb=- net4h>$8 | T= 266 WR= 97.0% $ 141.2/j | loseDay= 0/11 wrstDay=$   1.62 maxDD=$     0 RF=   inf 
+  2  vol_net_lin   sl=0.200 int=0.0 cap=0.70 cb=- net4h>$8 | T= 260 WR= 98.1% $ 135.5/j | loseDay= 0/11 wrstDay=$  20.05 maxDD=$     0 RF=   inf 
+  3  vol_net_lin   sl=0.200 int=0.0 cap=0.85 cb=- net4h>$36 | T=  74 WR=100.0% $  37.3/j | loseDay= 0/11 wrstDay=$   2.03 maxDD=$     0 RF=   inf 
+  4  vol_net_lin   sl=0.100 int=1.0 cap=0.85 cb=- net8h>$36 | T=  94 WR=100.0% $  31.5/j | loseDay= 0/11 wrstDay=$   1.52 maxDD=$     0 RF=   inf 
+  5  vol_net_lin   sl=0.200 int=0.0 cap=0.90 cb=- net4h>$36 | T=  68 WR=100.0% $  26.2/j | loseDay= 0/11 wrstDay=$   2.03 maxDD=$     0 RF=   inf 
+  6  vol_net_lin   sl=0.100 int=1.0 cap=0.85 cb=- net4h>$36 | T=  73 WR=100.0% $  26.0/j | loseDay= 0/11 wrstDay=$   0.51 maxDD=$     0 RF=   inf 
+  7  vol_net_lin   sl=0.100 int=1.0 cap=0.90 cb=- net8h>$36 | T=  91 WR=100.0% $  24.3/j | loseDay= 0/11 wrstDay=$   1.52 maxDD=$     0 RF=   inf 
+  8  vol_net_lin   sl=0.100 int=1.0 cap=0.90 cb=- net4h>$36 | T=  71 WR=100.0% $  20.7/j | loseDay= 0/11 wrstDay=$   0.51 maxDD=$     0 RF=   inf 
+  9  vol_net_lin   sl=0.200 int=1.0 cap=0.65 cb=- net8h>$8 | T=  35 WR=100.0% $  17.0/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+ 10  vol_net_lin   sl=0.200 int=1.0 cap=0.70 cb=- net8h>$8 | T=  35 WR=100.0% $  16.6/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+ 11  vol_net_lin   sl=0.200 int=0.0 cap=0.70 cb=- net4h>$36 | T=  78 WR= 98.7% $  51.9/j | loseDay= 1/11 wrstDay=$  -3.23 maxDD=$     3 RF= 187.8x
+ 12  vol_net_lin   sl=0.200 int=1.0 cap=0.65 cb=- net4h>$8 | T=  31 WR=100.0% $  14.1/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 13  vol_net_lin   sl=0.200 int=1.0 cap=0.70 cb=- net4h>$8 | T=  31 WR=100.0% $  13.7/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 14  vol_net_lin   sl=0.200 int=1.0 cap=0.85 cb=- net8h>$8 | T=  35 WR=100.0% $  12.8/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+ 15  vol_net_lin   sl=0.200 int=1.0 cap=0.65 cb=- net8h>$18 | T=  28 WR=100.0% $  12.6/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+
+>>> VOL_NET_EXPO — top 15 par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1 vol_net_expo        A=2.00 t=20 cap=0.65 cb=- net4h>$8 | T= 468 WR= 94.9% $ 113.9/j | loseDay= 4/11 wrstDay=$-306.15 maxDD=$   374 RF=   3.6x
+  2 vol_net_expo        A=2.00 t=20 cap=0.65 cb=- net4h>$36 | T= 117 WR= 95.7% $  52.1/j | loseDay= 2/11 wrstDay=$-181.69 maxDD=$   207 RF=   2.9x
+  3 vol_net_expo        A=0.50 t=40 cap=0.65 cb=- net4h>$8 | T=1479 WR= 90.5% $ 214.4/j | loseDay= 2/11 wrstDay=$-880.15 maxDD=$   880 RF=   2.8x
+  4 vol_net_expo        A=2.00 t=20 cap=0.65 cb=- net8h>$8 | T= 602 WR= 94.9% $ 161.0/j | loseDay= 3/11 wrstDay=$-372.47 maxDD=$   673 RF=   2.8x
+  5 vol_net_expo        A=2.00 t=40 cap=0.65 cb=- net8h>$8 | T=1186 WR= 93.7% $ 158.5/j | loseDay= 5/11 wrstDay=$-582.42 maxDD=$   696 RF=   2.7x
+  6 vol_net_expo        A=1.00 t=20 cap=0.65 cb=- net8h>$8 | T= 973 WR= 93.6% $ 160.7/j | loseDay= 5/11 wrstDay=$-514.64 maxDD=$   776 RF=   2.4x
+  7 vol_net_expo        A=2.00 t=20 cap=0.70 cb=- net4h>$8 | T= 463 WR= 95.0% $  75.6/j | loseDay= 4/11 wrstDay=$-281.64 maxDD=$   388 RF=   2.3x
+  8 vol_net_expo        A=1.00 t=20 cap=0.85 cb=- net8h>$8 | T= 926 WR= 95.9% $  69.3/j | loseDay= 5/11 wrstDay=$-298.11 maxDD=$   404 RF=   2.0x
+  9 vol_net_expo        A=1.00 t=20 cap=0.65 cb=- net4h>$8 | T= 766 WR= 93.5% $ 111.8/j | loseDay= 4/11 wrstDay=$-686.82 maxDD=$   687 RF=   1.9x
+ 10 vol_net_expo        A=1.00 t=20 cap=0.70 cb=- net4h>$8 | T= 760 WR= 93.9% $  89.7/j | loseDay= 4/11 wrstDay=$-559.29 maxDD=$   559 RF=   1.9x
+ 11 vol_net_expo        A=2.00 t=40 cap=0.65 cb=- net4h>$8 | T= 944 WR= 93.8% $ 117.4/j | loseDay= 3/11 wrstDay=$-786.91 maxDD=$   787 RF=   1.7x
+ 12 vol_net_expo        A=1.00 t=20 cap=0.70 cb=- net8h>$8 | T= 964 WR= 94.1% $ 109.3/j | loseDay= 5/11 wrstDay=$-475.66 maxDD=$   783 RF=   1.6x
+ 13 vol_net_expo        A=2.00 t=20 cap=0.65 cb=- net4h>$18 | T= 296 WR= 94.3% $  47.4/j | loseDay= 4/11 wrstDay=$-338.27 maxDD=$   344 RF=   1.6x
+ 14 vol_net_expo        A=2.00 t=20 cap=0.85 cb=- net4h>$36 | T= 113 WR= 96.5% $  15.4/j | loseDay= 3/11 wrstDay=$-113.25 maxDD=$   113 RF=   1.6x
+ 15 vol_net_expo        A=1.00 t=20 cap=0.65 cb=- net4h>$36 | T= 182 WR= 93.4% $  43.3/j | loseDay= 2/11 wrstDay=$-327.12 maxDD=$   327 RF=   1.5x
+
+>>> VOL_TREND_LIN — top 15 par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1 vol_trend_lin   sl=0.100 int=1.0 cap=0.85 cb=- tre8h>0.50 | T= 107 WR=100.0% $  35.9/j | loseDay= 0/11 wrstDay=$   3.07 maxDD=$     0 RF=   inf 
+  2 vol_trend_lin   sl=0.100 int=1.0 cap=0.90 cb=- tre8h>0.50 | T= 104 WR=100.0% $  27.3/j | loseDay= 0/11 wrstDay=$   3.07 maxDD=$     0 RF=   inf 
+  3 vol_trend_lin   sl=0.100 int=1.0 cap=0.85 cb=- tre4h>0.70 | T=  75 WR=100.0% $  24.0/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+  4 vol_trend_lin   sl=0.100 int=1.0 cap=0.85 cb=- tre8h>0.70 | T=  69 WR=100.0% $  22.3/j | loseDay= 0/11 wrstDay=$   2.08 maxDD=$     0 RF=   inf 
+  5 vol_trend_lin   sl=0.100 int=1.0 cap=0.90 cb=- tre4h>0.70 | T=  73 WR=100.0% $  18.7/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+  6 vol_trend_lin   sl=0.100 int=1.0 cap=0.90 cb=- tre8h>0.70 | T=  67 WR=100.0% $  17.1/j | loseDay= 0/11 wrstDay=$   2.08 maxDD=$     0 RF=   inf 
+  7 vol_trend_lin   sl=0.200 int=1.0 cap=0.65 cb=- tre8h>0.30 | T=  31 WR=100.0% $  13.7/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+  8 vol_trend_lin   sl=0.200 int=1.0 cap=0.70 cb=- tre8h>0.30 | T=  31 WR=100.0% $  13.4/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+  9 vol_trend_lin   sl=0.200 int=1.0 cap=0.65 cb=- tre4h>0.30 | T=  30 WR=100.0% $  12.7/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 10 vol_trend_lin   sl=0.200 int=1.0 cap=0.70 cb=- tre4h>0.30 | T=  30 WR=100.0% $  12.4/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 11 vol_trend_lin   sl=0.200 int=1.0 cap=0.65 cb=- tre8h>0.50 | T=  26 WR=100.0% $  12.2/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+ 12 vol_trend_lin   sl=0.200 int=1.0 cap=0.70 cb=- tre8h>0.50 | T=  26 WR=100.0% $  11.9/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+ 13 vol_trend_lin   sl=0.200 int=1.0 cap=0.85 cb=- tre4h>0.30 | T=  30 WR=100.0% $  10.7/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 14 vol_trend_lin   sl=0.200 int=1.0 cap=0.85 cb=- tre8h>0.30 | T=  31 WR=100.0% $  10.6/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+ 15 vol_trend_lin   sl=0.200 int=1.0 cap=0.65 cb=- tre4h>0.50 | T=  23 WR=100.0% $   9.6/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+
+>>> TOP 30 GLOBAL par RF
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1  vol_net_lin   sl=0.200 int=0.0 cap=0.65 cb=- net4h>$8 | T= 266 WR= 97.0% $ 141.2/j | loseDay= 0/11 wrstDay=$   1.62 maxDD=$     0 RF=   inf 
+  2  vol_net_lin   sl=0.200 int=0.0 cap=0.70 cb=- net4h>$8 | T= 260 WR= 98.1% $ 135.5/j | loseDay= 0/11 wrstDay=$  20.05 maxDD=$     0 RF=   inf 
+  3  vol_net_lin   sl=0.200 int=0.0 cap=0.85 cb=- net4h>$36 | T=  74 WR=100.0% $  37.3/j | loseDay= 0/11 wrstDay=$   2.03 maxDD=$     0 RF=   inf 
+  4 vol_trend_lin   sl=0.100 int=1.0 cap=0.85 cb=- tre8h>0.50 | T= 107 WR=100.0% $  35.9/j | loseDay= 0/11 wrstDay=$   3.07 maxDD=$     0 RF=   inf 
+  5  vol_net_lin   sl=0.100 int=1.0 cap=0.85 cb=- net8h>$36 | T=  94 WR=100.0% $  31.5/j | loseDay= 0/11 wrstDay=$   1.52 maxDD=$     0 RF=   inf 
+  6 vol_trend_lin   sl=0.100 int=1.0 cap=0.90 cb=- tre8h>0.50 | T= 104 WR=100.0% $  27.3/j | loseDay= 0/11 wrstDay=$   3.07 maxDD=$     0 RF=   inf 
+  7  vol_net_lin   sl=0.200 int=0.0 cap=0.90 cb=- net4h>$36 | T=  68 WR=100.0% $  26.2/j | loseDay= 0/11 wrstDay=$   2.03 maxDD=$     0 RF=   inf 
+  8  vol_net_lin   sl=0.100 int=1.0 cap=0.85 cb=- net4h>$36 | T=  73 WR=100.0% $  26.0/j | loseDay= 0/11 wrstDay=$   0.51 maxDD=$     0 RF=   inf 
+  9  vol_net_lin   sl=0.100 int=1.0 cap=0.90 cb=- net8h>$36 | T=  91 WR=100.0% $  24.3/j | loseDay= 0/11 wrstDay=$   1.52 maxDD=$     0 RF=   inf 
+ 10 vol_trend_lin   sl=0.100 int=1.0 cap=0.85 cb=- tre4h>0.70 | T=  75 WR=100.0% $  24.0/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 11 vol_trend_lin   sl=0.100 int=1.0 cap=0.85 cb=- tre8h>0.70 | T=  69 WR=100.0% $  22.3/j | loseDay= 0/11 wrstDay=$   2.08 maxDD=$     0 RF=   inf 
+ 12  vol_net_lin   sl=0.100 int=1.0 cap=0.90 cb=- net4h>$36 | T=  71 WR=100.0% $  20.7/j | loseDay= 0/11 wrstDay=$   0.51 maxDD=$     0 RF=   inf 
+ 13       linear   sl=0.100 int=0.5 cap=0.80 cb=-               - | T= 426 WR= 98.6% $ 108.9/j | loseDay= 2/11 wrstDay=$  -5.63 maxDD=$     6 RF= 226.2x
+ 14 vol_trend_lin   sl=0.100 int=1.0 cap=0.90 cb=- tre4h>0.70 | T=  73 WR=100.0% $  18.7/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 15 vol_trend_lin   sl=0.100 int=1.0 cap=0.90 cb=- tre8h>0.70 | T=  67 WR=100.0% $  17.1/j | loseDay= 0/11 wrstDay=$   2.08 maxDD=$     0 RF=   inf 
+ 16  vol_net_lin   sl=0.200 int=1.0 cap=0.65 cb=- net8h>$8 | T=  35 WR=100.0% $  17.0/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+ 17  vol_net_lin   sl=0.200 int=1.0 cap=0.70 cb=- net8h>$8 | T=  35 WR=100.0% $  16.6/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+ 18   vol_linear   sl=0.200 int=1.0 cap=0.65 cb=- ran8h>$40 | T=  34 WR=100.0% $  16.6/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+ 19  vol_net_lin   sl=0.200 int=0.0 cap=0.70 cb=- net4h>$36 | T=  78 WR= 98.7% $  51.9/j | loseDay= 1/11 wrstDay=$  -3.23 maxDD=$     3 RF= 187.8x
+ 20       linear   sl=0.100 int=2.0 cap=0.65 cb=-               - | T=  44 WR=100.0% $  14.8/j | loseDay= 0/11 wrstDay=$   5.16 maxDD=$     0 RF=   inf 
+ 21       linear   sl=0.100 int=2.0 cap=0.70 cb=-               - | T=  44 WR=100.0% $  14.8/j | loseDay= 0/11 wrstDay=$   5.16 maxDD=$     0 RF=   inf 
+ 22   vol_linear   sl=0.200 int=1.0 cap=0.70 cb=- ran8h>$40 | T=  33 WR=100.0% $  14.3/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+ 23  vol_net_lin   sl=0.200 int=1.0 cap=0.65 cb=- net4h>$8 | T=  31 WR=100.0% $  14.1/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 24 vol_trend_lin   sl=0.200 int=1.0 cap=0.65 cb=- tre8h>0.30 | T=  31 WR=100.0% $  13.7/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+ 25  vol_net_lin   sl=0.200 int=1.0 cap=0.70 cb=- net4h>$8 | T=  31 WR=100.0% $  13.7/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 26 vol_trend_lin   sl=0.200 int=1.0 cap=0.70 cb=- tre8h>0.30 | T=  31 WR=100.0% $  13.4/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+ 27  vol_net_lin   sl=0.200 int=1.0 cap=0.85 cb=- net8h>$8 | T=  35 WR=100.0% $  12.8/j | loseDay= 0/11 wrstDay=$   2.57 maxDD=$     0 RF=   inf 
+ 28 vol_trend_lin   sl=0.200 int=1.0 cap=0.65 cb=- tre4h>0.30 | T=  30 WR=100.0% $  12.7/j | loseDay= 0/11 wrstDay=$   1.01 maxDD=$     0 RF=   inf 
+ 29   vol_linear   sl=0.200 int=1.0 cap=0.80 cb=- ran8h>$40 | T=  33 WR=100.0% $  12.6/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+ 30  vol_net_lin   sl=0.200 int=1.0 cap=0.65 cb=- net8h>$18 | T=  28 WR=100.0% $  12.6/j | loseDay= 0/11 wrstDay=$   1.55 maxDD=$     0 RF=   inf 
+
+>>> TOP 20 CONSISTANCE (min losing_days, min 100 trades)
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1  vol_net_lin   sl=0.200 int=0.0 cap=0.65 cb=- net4h>$8 | T= 266 WR= 97.0% $ 141.2/j | loseDay= 0/11 wrstDay=$   1.62 maxDD=$     0 RF=   inf 
+  2  vol_net_lin   sl=0.200 int=0.0 cap=0.70 cb=- net4h>$8 | T= 260 WR= 98.1% $ 135.5/j | loseDay= 0/11 wrstDay=$  20.05 maxDD=$     0 RF=   inf 
+  3 vol_trend_lin   sl=0.100 int=1.0 cap=0.85 cb=- tre8h>0.50 | T= 107 WR=100.0% $  35.9/j | loseDay= 0/11 wrstDay=$   3.07 maxDD=$     0 RF=   inf 
+  4 vol_trend_lin   sl=0.100 int=1.0 cap=0.90 cb=- tre8h>0.50 | T= 104 WR=100.0% $  27.3/j | loseDay= 0/11 wrstDay=$   3.07 maxDD=$     0 RF=   inf 
+  5  vol_net_lin   sl=0.200 int=0.0 cap=0.85 cb=- net4h>$8 | T= 245 WR= 99.2% $  95.8/j | loseDay= 1/11 wrstDay=$ -10.93 maxDD=$    11 RF= 102.5x
+  6 vol_trend_lin   sl=0.200 int=0.0 cap=0.70 cb=- tre4h>0.30 | T= 265 WR= 97.7% $ 125.2/j | loseDay= 1/11 wrstDay=$ -39.28 maxDD=$    39 RF=  37.3x
+  7 vol_trend_lin   sl=0.200 int=0.0 cap=0.65 cb=- tre4h>0.30 | T= 271 WR= 96.7% $ 130.7/j | loseDay= 1/11 wrstDay=$ -66.82 maxDD=$    67 RF=  22.9x
+  8       linear   sl=0.100 int=0.5 cap=0.85 cb=-               - | T= 419 WR= 98.8% $ 100.6/j | loseDay= 1/11 wrstDay=$ -56.70 maxDD=$    57 RF=  20.7x
+  9  vol_net_lin   sl=0.200 int=0.0 cap=0.90 cb=- net4h>$8 | T= 234 WR= 99.1% $  63.7/j | loseDay= 1/11 wrstDay=$ -37.40 maxDD=$    37 RF=  19.9x
+ 10       vol_cb   sl=0.100 int=0.0 cap=0.65 cb=1 ran4h>$25 | T= 573 WR= 95.6% $ 164.2/j | loseDay= 1/11 wrstDay=$ -99.39 maxDD=$    99 RF=  19.3x
+ 11  vol_net_lin   sl=0.200 int=0.0 cap=0.90 cb=- net8h>$8 | T= 294 WR= 98.6% $  77.3/j | loseDay= 1/11 wrstDay=$ -48.49 maxDD=$    48 RF=  18.6x
+ 12 vol_trend_lin   sl=0.200 int=0.0 cap=0.85 cb=- tre4h>0.50 | T= 187 WR= 98.9% $  71.6/j | loseDay= 1/11 wrstDay=$ -51.23 maxDD=$    51 RF=  16.3x
+ 13   vol_linear   sl=0.100 int=0.0 cap=0.65 cb=- ran4h>$25 | T= 760 WR= 95.4% $ 182.5/j | loseDay= 1/11 wrstDay=$-157.25 maxDD=$   157 RF=  13.6x
+ 14 vol_trend_lin   sl=0.200 int=0.0 cap=0.90 cb=- tre8h>0.30 | T= 256 WR= 98.4% $  64.0/j | loseDay= 1/11 wrstDay=$ -62.86 maxDD=$    63 RF=  11.9x
+ 15  vol_net_lin   sl=0.200 int=0.0 cap=0.85 cb=- net8h>$18 | T= 201 WR= 98.5% $  76.5/j | loseDay= 1/11 wrstDay=$ -76.87 maxDD=$    77 RF=  11.6x
+ 16   vol_linear   sl=0.200 int=0.0 cap=0.70 cb=- ran4h>$40 | T= 145 WR= 97.2% $  84.7/j | loseDay= 1/11 wrstDay=$ -87.07 maxDD=$    87 RF=  11.4x
+ 17       linear   sl=0.100 int=0.5 cap=0.90 cb=-               - | T= 409 WR= 99.3% $  90.4/j | loseDay= 1/11 wrstDay=$ -93.37 maxDD=$    93 RF=  11.3x
+ 18 vol_trend_lin   sl=0.200 int=0.0 cap=0.70 cb=- tre4h>0.70 | T= 118 WR= 99.2% $  76.7/j | loseDay= 1/11 wrstDay=$ -80.91 maxDD=$    81 RF=  11.1x
+ 19   vol_linear   sl=0.200 int=0.0 cap=0.85 cb=- ran4h>$40 | T= 135 WR= 97.8% $  50.0/j | loseDay= 1/11 wrstDay=$ -55.57 maxDD=$    56 RF=  10.5x
+ 20       vol_cb   sl=0.100 int=0.0 cap=0.90 cb=1 ran4h>$25 | T= 614 WR= 97.9% $  90.4/j | loseDay= 1/11 wrstDay=$-103.87 maxDD=$   104 RF=  10.2x

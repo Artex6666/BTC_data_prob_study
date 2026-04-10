@@ -1,0 +1,115 @@
+God Curve Optimizer v5  —  Tri RF  |  Date: 2026-03-28 19:36  |  Data: 37.6j  |  Configs: 201/201  |  738s
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+>>> LINEAR — top 15 par RF
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1     linear     sl=2 int=0 cap=0.65 cb=-       -       | T=3612 WR= 95.1% $ 386.2/j | loseDay= 3/37 wrstDay=$-251.91 maxDD=$   252 RF=  57.6x
+  2     linear     sl=3 int=0 cap=0.70 cb=-       -       | T=2629 WR= 96.0% $ 318.4/j | loseDay= 5/37 wrstDay=$-229.03 maxDD=$   229 RF=  52.2x
+  3     linear     sl=5 int=0 cap=0.65 cb=-       -       | T=1643 WR= 95.8% $ 250.6/j | loseDay= 3/37 wrstDay=$-126.60 maxDD=$   194 RF=  48.5x
+  4     linear     sl=2 int=0 cap=0.85 cb=-       -       | T=3460 WR= 97.0% $ 260.9/j | loseDay= 4/37 wrstDay=$-203.22 maxDD=$   203 RF=  48.2x
+  5     linear     sl=5 int=0 cap=0.70 cb=-       -       | T=1620 WR= 96.5% $ 247.8/j | loseDay= 3/37 wrstDay=$-177.67 maxDD=$   194 RF=  47.9x
+  6     linear     sl=2 int=0 cap=0.90 cb=-       -       | T=3343 WR= 97.8% $ 227.8/j | loseDay= 4/37 wrstDay=$-198.19 maxDD=$   198 RF=  43.2x
+  7     linear     sl=2 int=0 cap=0.70 cb=-       -       | T=3589 WR= 95.6% $ 359.6/j | loseDay= 2/37 wrstDay=$-428.89 maxDD=$   429 RF=  31.5x
+  8     linear     sl=3 int=0 cap=0.65 cb=-       -       | T=2652 WR= 95.4% $ 328.8/j | loseDay= 4/37 wrstDay=$-454.37 maxDD=$   454 RF=  27.2x
+  9     linear     sl=1 int=0 cap=0.70 cb=-       -       | T=4863 WR= 93.4% $ 361.2/j | loseDay= 5/37 wrstDay=$-605.19 maxDD=$   605 RF=  22.4x
+ 10     linear     sl=1 int=0 cap=0.65 cb=-       -       | T=4886 WR= 92.8% $ 363.1/j | loseDay= 5/37 wrstDay=$-678.13 maxDD=$   678 RF=  20.1x
+ 11     linear     sl=1 int=0 cap=0.85 cb=-       -       | T=4727 WR= 95.3% $ 261.3/j | loseDay= 7/37 wrstDay=$-426.11 maxDD=$   504 RF=  19.5x
+ 12     linear     sl=3 int=0 cap=0.80 cb=-       -       | T=2560 WR= 96.7% $ 232.0/j | loseDay= 5/37 wrstDay=$-449.90 maxDD=$   450 RF=  19.4x
+ 13     linear     sl=5 int=0 cap=0.80 cb=-       -       | T=1550 WR= 97.2% $ 177.7/j | loseDay= 4/37 wrstDay=$-281.72 maxDD=$   358 RF=  18.7x
+ 14     linear     sl=1 int=0 cap=0.80 cb=-       -       | T=4801 WR= 94.6% $ 315.3/j | loseDay= 6/37 wrstDay=$-511.08 maxDD=$   733 RF=  16.2x
+ 15     linear     sl=2 int=0 cap=0.80 cb=-       -       | T=3519 WR= 96.6% $ 315.1/j | loseDay= 4/37 wrstDay=$-747.91 maxDD=$   748 RF=  15.8x
+
+>>> EXPO — top 15 par RF
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1       expo      A=40 t=20 cap=0.70 cb=-       -       | T=2615 WR= 95.3% $ 319.1/j | loseDay= 4/37 wrstDay=$-105.02 maxDD=$   105 RF= 114.2x
+  2       expo      A=40 t=20 cap=0.65 cb=-       -       | T=2636 WR= 94.7% $ 332.7/j | loseDay= 3/37 wrstDay=$-240.91 maxDD=$   241 RF=  51.9x
+  3       expo      A=20 t=20 cap=0.90 cb=-       -       | T=3300 WR= 97.0% $ 183.9/j | loseDay= 6/37 wrstDay=$-261.15 maxDD=$   286 RF=  24.2x
+  4       expo      A=40 t=20 cap=0.80 cb=-       -       | T=2537 WR= 96.3% $ 235.1/j | loseDay= 4/37 wrstDay=$-403.34 maxDD=$   403 RF=  21.9x
+  5       expo      A=10 t=20 cap=0.90 cb=-       -       | T=4145 WR= 96.4% $ 192.4/j | loseDay= 6/37 wrstDay=$-357.82 maxDD=$   358 RF=  20.2x
+  6       expo      A=20 t=20 cap=0.70 cb=-       -       | T=3567 WR= 94.1% $ 284.9/j | loseDay= 7/37 wrstDay=$-351.21 maxDD=$   557 RF=  19.2x
+  7       expo      A=10 t=20 cap=0.85 cb=-       -       | T=4293 WR= 95.2% $ 228.2/j | loseDay= 7/37 wrstDay=$-456.23 maxDD=$   456 RF=  18.8x
+  8       expo      A=40 t=20 cap=0.90 cb=-       -       | T=2357 WR= 97.7% $ 159.9/j | loseDay= 5/37 wrstDay=$-321.24 maxDD=$   321 RF=  18.7x
+  9       expo      A=20 t=20 cap=0.65 cb=-       -       | T=3591 WR= 93.4% $ 295.8/j | loseDay= 8/37 wrstDay=$-345.00 maxDD=$   597 RF=  18.6x
+ 10       expo      A=40 t=60 cap=0.85 cb=-       -       | T=4831 WR= 95.0% $ 267.4/j | loseDay= 7/37 wrstDay=$-393.69 maxDD=$   547 RF=  18.4x
+ 11       expo      A=40 t=60 cap=0.80 cb=-       -       | T=4903 WR= 94.2% $ 320.0/j | loseDay= 6/37 wrstDay=$-632.65 maxDD=$   662 RF=  18.2x
+ 12       expo      A=40 t=20 cap=0.85 cb=-       -       | T=2469 WR= 96.8% $ 183.4/j | loseDay= 6/37 wrstDay=$-390.01 maxDD=$   390 RF=  17.7x
+ 13       expo      A=40 t=40 cap=0.85 cb=-       -       | T=4058 WR= 96.0% $ 235.5/j | loseDay= 7/37 wrstDay=$-324.91 maxDD=$   504 RF=  17.6x
+ 14       expo      A=40 t=40 cap=0.65 cb=-       -       | T=4228 WR= 93.2% $ 288.3/j | loseDay= 8/37 wrstDay=$-438.21 maxDD=$   664 RF=  16.3x
+ 15       expo      A=40 t=40 cap=0.90 cb=-       -       | T=3925 WR= 96.8% $ 195.0/j | loseDay= 7/37 wrstDay=$-453.22 maxDD=$   453 RF=  16.2x
+
+>>> CB_LINEAR — top 15 par RF
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1  cb_linear     sl=2 int=0 cap=0.90 cb=2       -       | T=3261 WR= 97.7% $ 219.4/j | loseDay= 4/37 wrstDay=$-150.29 maxDD=$   150 RF=  54.8x
+  2  cb_linear     sl=2 int=0 cap=0.65 cb=1       -       | T=2398 WR= 95.5% $ 220.6/j | loseDay= 6/37 wrstDay=$-183.24 maxDD=$   183 RF=  45.2x
+  3  cb_linear     sl=2 int=0 cap=0.85 cb=2       -       | T=3285 WR= 97.0% $ 241.1/j | loseDay= 4/37 wrstDay=$-251.54 maxDD=$   252 RF=  36.0x
+  4  cb_linear     sl=3 int=0 cap=0.65 cb=1       -       | T=1932 WR= 96.0% $ 225.6/j | loseDay= 4/37 wrstDay=$-308.86 maxDD=$   309 RF=  27.5x
+  5  cb_linear     sl=2 int=0 cap=0.85 cb=1       -       | T=2680 WR= 97.2% $ 209.5/j | loseDay= 5/37 wrstDay=$-300.87 maxDD=$   301 RF=  26.2x
+  6  cb_linear     sl=2 int=5 cap=0.65 cb=1       -       | T=2184 WR= 96.1% $ 190.5/j | loseDay= 5/37 wrstDay=$-272.35 maxDD=$   288 RF=  24.9x
+  7  cb_linear     sl=2 int=0 cap=0.65 cb=2       -       | T=3200 WR= 95.1% $ 297.4/j | loseDay= 5/37 wrstDay=$-314.79 maxDD=$   451 RF=  24.8x
+  8  cb_linear     sl=3 int=0 cap=0.90 cb=2       -       | T=2361 WR= 97.9% $ 152.7/j | loseDay= 4/37 wrstDay=$-259.39 maxDD=$   259 RF=  22.1x
+  9  cb_linear     sl=2 int=5 cap=0.90 cb=2       -       | T=2807 WR= 97.8% $ 173.0/j | loseDay= 4/37 wrstDay=$-300.19 maxDD=$   300 RF=  21.7x
+ 10  cb_linear     sl=3 int=0 cap=0.90 cb=1       -       | T=2062 WR= 98.0% $ 131.6/j | loseDay= 5/37 wrstDay=$-234.85 maxDD=$   235 RF=  21.1x
+ 11  cb_linear     sl=2 int=0 cap=0.90 cb=1       -       | T=2727 WR= 97.8% $ 180.0/j | loseDay= 6/37 wrstDay=$-355.41 maxDD=$   355 RF=  19.0x
+ 12  cb_linear     sl=3 int=5 cap=0.85 cb=2       -       | T=1947 WR= 97.5% $ 145.8/j | loseDay= 5/37 wrstDay=$-329.49 maxDD=$   329 RF=  16.6x
+ 13  cb_linear     sl=3 int=0 cap=0.65 cb=2       -       | T=2439 WR= 95.4% $ 280.7/j | loseDay= 7/37 wrstDay=$-580.20 maxDD=$   652 RF=  16.2x
+ 14  cb_linear     sl=2 int=5 cap=0.85 cb=2       -       | T=2815 WR= 97.1% $ 177.4/j | loseDay= 7/37 wrstDay=$-463.09 maxDD=$   463 RF=  14.4x
+ 15  cb_linear     sl=3 int=0 cap=0.85 cb=2       -       | T=2395 WR= 97.1% $ 164.2/j | loseDay= 6/37 wrstDay=$-435.16 maxDD=$   435 RF=  14.2x
+
+>>> RSI_FILTER — top 15 par RF
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1 rsi_filter     sl=2 int=0 cap=0.90 cb=- rsi120>80 | T=3095 WR= 97.6% $ 188.9/j | loseDay= 4/37 wrstDay=$-308.10 maxDD=$   308 RF=  23.0x
+  2 rsi_filter     sl=2 int=0 cap=0.85 cb=- rsi120>80 | T=3207 WR= 96.8% $ 213.4/j | loseDay= 5/37 wrstDay=$-368.29 maxDD=$   368 RF=  21.8x
+  3 rsi_filter     sl=2 int=0 cap=0.65 cb=- rsi120>80 | T=3352 WR= 94.7% $ 301.6/j | loseDay= 5/37 wrstDay=$-570.92 maxDD=$   571 RF=  19.9x
+  4 rsi_filter     sl=2 int=0 cap=0.90 cb=- rsi120>75 | T=2969 WR= 97.5% $ 170.0/j | loseDay= 5/37 wrstDay=$-352.99 maxDD=$   353 RF=  18.1x
+  5 rsi_filter     sl=2 int=0 cap=0.90 cb=- rsi60>80 | T=2925 WR= 97.4% $ 163.0/j | loseDay= 5/37 wrstDay=$-383.39 maxDD=$   383 RF=  16.0x
+  6 rsi_filter     sl=2 int=0 cap=0.85 cb=- rsi120>75 | T=3076 WR= 96.6% $ 186.8/j | loseDay= 7/37 wrstDay=$-460.40 maxDD=$   460 RF=  15.2x
+  7 rsi_filter     sl=3 int=0 cap=0.65 cb=- rsi120>80 | T=2463 WR= 95.0% $ 270.0/j | loseDay= 5/37 wrstDay=$-715.74 maxDD=$   716 RF=  14.2x
+  8 rsi_filter     sl=2 int=0 cap=0.85 cb=- rsi60>80 | T=3019 WR= 96.6% $ 181.9/j | loseDay= 6/37 wrstDay=$-503.79 maxDD=$   504 RF=  13.6x
+  9 rsi_filter     sl=2 int=0 cap=0.90 cb=- rsi60>75 | T=2788 WR= 97.3% $ 141.1/j | loseDay= 6/37 wrstDay=$-392.04 maxDD=$   392 RF=  13.5x
+ 10 rsi_filter     sl=2 int=0 cap=0.90 cb=- rsi120>70 | T=2787 WR= 97.3% $ 143.5/j | loseDay= 6/37 wrstDay=$-406.99 maxDD=$   407 RF=  13.3x
+ 11 rsi_filter     sl=3 int=5 cap=0.85 cb=- rsi120>80 | T=1857 WR= 97.4% $ 131.6/j | loseDay= 5/37 wrstDay=$-396.19 maxDD=$   396 RF=  12.5x
+ 12 rsi_filter     sl=2 int=5 cap=0.90 cb=- rsi120>80 | T=2655 WR= 97.6% $ 146.3/j | loseDay= 5/37 wrstDay=$-460.13 maxDD=$   460 RF=  11.9x
+ 13 rsi_filter     sl=2 int=0 cap=0.65 cb=- rsi120>75 | T=3219 WR= 94.5% $ 249.3/j | loseDay= 5/37 wrstDay=$-787.00 maxDD=$   787 RF=  11.9x
+ 14 rsi_filter     sl=2 int=0 cap=0.90 cb=- rsi30>80 | T=2716 WR= 97.3% $ 132.0/j | loseDay= 7/37 wrstDay=$-431.73 maxDD=$   432 RF=  11.5x
+ 15 rsi_filter     sl=3 int=0 cap=0.90 cb=- rsi120>80 | T=2217 WR= 97.7% $ 128.5/j | loseDay= 5/37 wrstDay=$-440.59 maxDD=$   441 RF=  11.0x
+
+>>> TOP 20 GLOBAL par RF
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1       expo      A=40 t=20 cap=0.70 cb=-       -       | T=2615 WR= 95.3% $ 319.1/j | loseDay= 4/37 wrstDay=$-105.02 maxDD=$   105 RF= 114.2x
+  2     linear     sl=2 int=0 cap=0.65 cb=-       -       | T=3612 WR= 95.1% $ 386.2/j | loseDay= 3/37 wrstDay=$-251.91 maxDD=$   252 RF=  57.6x
+  3  cb_linear     sl=2 int=0 cap=0.90 cb=2       -       | T=3261 WR= 97.7% $ 219.4/j | loseDay= 4/37 wrstDay=$-150.29 maxDD=$   150 RF=  54.8x
+  4     linear     sl=3 int=0 cap=0.70 cb=-       -       | T=2629 WR= 96.0% $ 318.4/j | loseDay= 5/37 wrstDay=$-229.03 maxDD=$   229 RF=  52.2x
+  5       expo      A=40 t=20 cap=0.65 cb=-       -       | T=2636 WR= 94.7% $ 332.7/j | loseDay= 3/37 wrstDay=$-240.91 maxDD=$   241 RF=  51.9x
+  6     linear     sl=5 int=0 cap=0.65 cb=-       -       | T=1643 WR= 95.8% $ 250.6/j | loseDay= 3/37 wrstDay=$-126.60 maxDD=$   194 RF=  48.5x
+  7     linear     sl=2 int=0 cap=0.85 cb=-       -       | T=3460 WR= 97.0% $ 260.9/j | loseDay= 4/37 wrstDay=$-203.22 maxDD=$   203 RF=  48.2x
+  8     linear     sl=5 int=0 cap=0.70 cb=-       -       | T=1620 WR= 96.5% $ 247.8/j | loseDay= 3/37 wrstDay=$-177.67 maxDD=$   194 RF=  47.9x
+  9  cb_linear     sl=2 int=0 cap=0.65 cb=1       -       | T=2398 WR= 95.5% $ 220.6/j | loseDay= 6/37 wrstDay=$-183.24 maxDD=$   183 RF=  45.2x
+ 10     linear     sl=2 int=0 cap=0.90 cb=-       -       | T=3343 WR= 97.8% $ 227.8/j | loseDay= 4/37 wrstDay=$-198.19 maxDD=$   198 RF=  43.2x
+ 11  cb_linear     sl=2 int=0 cap=0.85 cb=2       -       | T=3285 WR= 97.0% $ 241.1/j | loseDay= 4/37 wrstDay=$-251.54 maxDD=$   252 RF=  36.0x
+ 12     linear     sl=2 int=0 cap=0.70 cb=-       -       | T=3589 WR= 95.6% $ 359.6/j | loseDay= 2/37 wrstDay=$-428.89 maxDD=$   429 RF=  31.5x
+ 13  cb_linear     sl=3 int=0 cap=0.65 cb=1       -       | T=1932 WR= 96.0% $ 225.6/j | loseDay= 4/37 wrstDay=$-308.86 maxDD=$   309 RF=  27.5x
+ 14     linear     sl=3 int=0 cap=0.65 cb=-       -       | T=2652 WR= 95.4% $ 328.8/j | loseDay= 4/37 wrstDay=$-454.37 maxDD=$   454 RF=  27.2x
+ 15  cb_linear     sl=2 int=0 cap=0.85 cb=1       -       | T=2680 WR= 97.2% $ 209.5/j | loseDay= 5/37 wrstDay=$-300.87 maxDD=$   301 RF=  26.2x
+ 16  cb_linear     sl=2 int=5 cap=0.65 cb=1       -       | T=2184 WR= 96.1% $ 190.5/j | loseDay= 5/37 wrstDay=$-272.35 maxDD=$   288 RF=  24.9x
+ 17  cb_linear     sl=2 int=0 cap=0.65 cb=2       -       | T=3200 WR= 95.1% $ 297.4/j | loseDay= 5/37 wrstDay=$-314.79 maxDD=$   451 RF=  24.8x
+ 18       expo      A=20 t=20 cap=0.90 cb=-       -       | T=3300 WR= 97.0% $ 183.9/j | loseDay= 6/37 wrstDay=$-261.15 maxDD=$   286 RF=  24.2x
+ 19 rsi_filter     sl=2 int=0 cap=0.90 cb=- rsi120>80 | T=3095 WR= 97.6% $ 188.9/j | loseDay= 4/37 wrstDay=$-308.10 maxDD=$   308 RF=  23.0x
+ 20     linear     sl=1 int=0 cap=0.70 cb=-       -       | T=4863 WR= 93.4% $ 361.2/j | loseDay= 5/37 wrstDay=$-605.19 maxDD=$   605 RF=  22.4x
+
+>>> TOP 15 CONSISTANCE (min losing_days, min 400 trades)
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  1     linear     sl=2 int=0 cap=0.70 cb=-       -       | T=3589 WR= 95.6% $ 359.6/j | loseDay= 2/37 wrstDay=$-428.89 maxDD=$   429 RF=  31.5x
+  2     linear     sl=2 int=0 cap=0.65 cb=-       -       | T=3612 WR= 95.1% $ 386.2/j | loseDay= 3/37 wrstDay=$-251.91 maxDD=$   252 RF=  57.6x
+  3       expo      A=40 t=20 cap=0.65 cb=-       -       | T=2636 WR= 94.7% $ 332.7/j | loseDay= 3/37 wrstDay=$-240.91 maxDD=$   241 RF=  51.9x
+  4     linear     sl=5 int=0 cap=0.65 cb=-       -       | T=1643 WR= 95.8% $ 250.6/j | loseDay= 3/37 wrstDay=$-126.60 maxDD=$   194 RF=  48.5x
+  5     linear     sl=5 int=0 cap=0.70 cb=-       -       | T=1620 WR= 96.5% $ 247.8/j | loseDay= 3/37 wrstDay=$-177.67 maxDD=$   194 RF=  47.9x
+  6 rsi_filter     sl=3 int=5 cap=0.65 cb=- rsi120>80 | T=1959 WR= 95.7% $ 207.9/j | loseDay= 3/37 wrstDay=$-963.19 maxDD=$   963 RF=   8.1x
+  7       expo      A=40 t=20 cap=0.70 cb=-       -       | T=2615 WR= 95.3% $ 319.1/j | loseDay= 4/37 wrstDay=$-105.02 maxDD=$   105 RF= 114.2x
+  8  cb_linear     sl=2 int=0 cap=0.90 cb=2       -       | T=3261 WR= 97.7% $ 219.4/j | loseDay= 4/37 wrstDay=$-150.29 maxDD=$   150 RF=  54.8x
+  9     linear     sl=2 int=0 cap=0.85 cb=-       -       | T=3460 WR= 97.0% $ 260.9/j | loseDay= 4/37 wrstDay=$-203.22 maxDD=$   203 RF=  48.2x
+ 10     linear     sl=2 int=0 cap=0.90 cb=-       -       | T=3343 WR= 97.8% $ 227.8/j | loseDay= 4/37 wrstDay=$-198.19 maxDD=$   198 RF=  43.2x
+ 11  cb_linear     sl=2 int=0 cap=0.85 cb=2       -       | T=3285 WR= 97.0% $ 241.1/j | loseDay= 4/37 wrstDay=$-251.54 maxDD=$   252 RF=  36.0x
+ 12  cb_linear     sl=3 int=0 cap=0.65 cb=1       -       | T=1932 WR= 96.0% $ 225.6/j | loseDay= 4/37 wrstDay=$-308.86 maxDD=$   309 RF=  27.5x
+ 13     linear     sl=3 int=0 cap=0.65 cb=-       -       | T=2652 WR= 95.4% $ 328.8/j | loseDay= 4/37 wrstDay=$-454.37 maxDD=$   454 RF=  27.2x
+ 14 rsi_filter     sl=2 int=0 cap=0.90 cb=- rsi120>80 | T=3095 WR= 97.6% $ 188.9/j | loseDay= 4/37 wrstDay=$-308.10 maxDD=$   308 RF=  23.0x
+ 15  cb_linear     sl=3 int=0 cap=0.90 cb=2       -       | T=2361 WR= 97.9% $ 152.7/j | loseDay= 4/37 wrstDay=$-259.39 maxDD=$   259 RF=  22.1x
