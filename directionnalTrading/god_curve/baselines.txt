@@ -1,0 +1,74 @@
+----------------------------------------------------------------------
+BTC
+----------------------------------------------------------------------
+  ORDER_SIZE_BTC                                120 $
+  MAX_FILLS                                     2
+  MIN_PRICE_BTC                                 0.75
+
+  SAFETY_SLOPE_BTC                              7
+  SAFETY_INTERCEPT_BTC                          0
+
+  Gate vol 1h net (constante code, pas .env)    > 60 $
+  vol_type (code)                               net
+  min_delta_usd (code)                          0.01 $
+
+
+----------------------------------------------------------------------
+ETH
+----------------------------------------------------------------------
+  ORDER_SIZE_ETH                                130 $
+  MAX_FILLS                                     2
+  MIN_PRICE_ETH                                 0.85
+
+  SAFETY_SLOPE_ETH                              0.3
+  SAFETY_INTERCEPT_ETH                          0.1  (floor)
+
+  vrs_enabled                                   True
+  vrs_lb_h                                      1
+  vrs_base                                      8
+  vrs_g_min                                     0.75
+  vrs_g_max                                     1.50
+  eq_cap                                        0.75
+
+  vol_type (code)                               vrs
+  min_delta_usd = intercept floor               0.1  (remplace l'ancien 0.01 $)
+
+  -- optimizer: vrs_lin sl=0.300 int=0.1 cap=0.75 vrs1h b=8 g=0.75-1.50
+  -- run: god_curve_eth_v1_20260417_120912  RF=18.1x  $275/j (29.6j)  WR=97.7%
+
+
+----------------------------------------------------------------------
+SOL
+----------------------------------------------------------------------
+  ORDER_SIZE_SOL                                50 $
+  MAX_FILLS_ALT                                 3
+  MIN_PRICE_SOL                                 0.75
+
+  SAFETY_SLOPE_SOL                              0.010
+  SAFETY_INTERCEPT_SOL                          0
+
+  Baseline visée                                vrs_lin rank 2 RF
+  Implémentation actuelle (code)                vrs_lin + gate pct_range_1h
+  SAFETY_VRS_ENABLED_SOL                        true
+  SAFETY_VRS_BASE_SOL                           0.50
+  SAFETY_VRS_G_MIN_SOL                          0.50
+  SAFETY_VRS_G_MAX_SOL                          1.50
+  bucket VRS partagé                            m5 / m15 / h1
+  source VRS                                    opens Binance 5m précédents sur 1h glissante
+  recalcul VRS                                  à chaque bucket 5m; h1 prend bien le bucket de fin, pas celui de l'open
+  vol_type (code)                               pct_range
+  vol_thresh pct_range (dur code, pas .env)     0.50  (en % du prix, gate si range 1h trop bas)
+  min_delta_usd (code)                          0.01 $
+----------------------------------------------------------------------
+XRP
+----------------------------------------------------------------------
+  ORDER_SIZE_XRP                                40 $
+  MAX_FILLS_ALT                                 3
+  MIN_PRICE_XRP                                 0.65
+
+  SAFETY_SLOPE_XRP                              0.0001
+  SAFETY_INTERCEPT_XRP                          0
+
+  vol_type (code)                               trend
+  seuil trend 2h (dur code, pas ETH_TREND)      0.50
+  min_delta_usd (code)                          0.0002 $

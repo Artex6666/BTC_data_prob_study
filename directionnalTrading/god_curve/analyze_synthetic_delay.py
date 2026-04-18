@@ -38,7 +38,7 @@ for tf in ['m5', 'm15', 'h1']:
         if wo is None: continue
         if pd.to_datetime(wo["ts"]).timestamp() < CUTOFF_TS: continue
 
-        we  = next((e for e in events if e.get("event") == "window_ended"), None)
+        we  = next((e for e in events if e.get("event") in ("window_ended", "window_settled")), None)
         trg = next((e for e in events if e.get("event") == "safety_trigger"), None)
         snaps = [e for e in events if e.get("event") == "dashboard_snapshot"]
 

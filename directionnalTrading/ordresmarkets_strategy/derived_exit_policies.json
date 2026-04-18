@@ -1,0 +1,38 @@
+{
+  "btc|h1": {
+    "take_profit_c": null,
+    "stop_loss_c": 6,
+    "max_hold_s": null,
+    "mean_pnl_per_100usd": -1.2419972138356619
+  },
+  "btc|m15": {
+    "take_profit_c": null,
+    "stop_loss_c": null,
+    "max_hold_s": null,
+    "mean_pnl_per_100usd": 2.452818381824854
+  },
+  "btc|m5": {
+    "take_profit_c": null,
+    "stop_loss_c": null,
+    "max_hold_s": null,
+    "mean_pnl_per_100usd": 4.135430589989966
+  },
+  "eth|h1": {
+    "take_profit_c": null,
+    "stop_loss_c": null,
+    "max_hold_s": null,
+    "mean_pnl_per_100usd": 5.785930598614225
+  },
+  "eth|m15": {
+    "take_profit_c": null,
+    "stop_loss_c": 10,
+    "max_hold_s": null,
+    "mean_pnl_per_100usd": 2.3241251185308203
+  },
+  "eth|m5": {
+    "take_profit_c": 12,
+    "stop_loss_c": null,
+    "max_hold_s": 60,
+    "mean_pnl_per_100usd": 4.4137988452681
+  }
+}

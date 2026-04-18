@@ -1,2 +1,0 @@
-NO CANCEL (Old Logic)     |  97.05% | 645    | 271 (W:263 L:8) | $826.50
-DYNAMIC CANCEL (New Logic) |  99.17% | 549    | 241 (W:239 L:2) | $1,347.00

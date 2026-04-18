@@ -235,7 +235,7 @@ def get_live_pnl(ce_utc, tf, live_dir, month_map):
         for line in fn.open(encoding="utf-8", errors="replace"):
             try: events.append(json.loads(line.strip()))
             except: continue
-        we = next((e for e in events if e.get("event") == "window_ended"), None)
+        we = next((e for e in events if e.get("event") in ("window_ended", "window_settled")), None)
         if we is None: return None, None, None
         up_s = float(we.get("up_shares", 0)); dn_s = float(we.get("down_shares", 0))
         up_c = float(we.get("up_cost", 0));   dn_c = float(we.get("down_cost", 0))

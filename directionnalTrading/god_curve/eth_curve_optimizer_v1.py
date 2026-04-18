@@ -3,7 +3,7 @@ ETH Curve Optimizer v1
 Meme logique que god_curve_optimizer_v6 (BTC) mais adapte ETH :
   - Slopes ~20x plus petites (ETH spot ~$2000 vs BTC ~$70K)
   - Vol thresholds ~20x plus petites
-  - CSV : Datas/csv/ETH.csv + reportLive/safeChase/60_lb0.5h/ETH.csv
+  - CSV par défaut : Datas/csv/ETH.csv + reportLive/safeChase/ETH.csv (voir --csv)
   - Attention : seulement ~12 jours de donnees -> resultats a valider
 """
 
@@ -29,11 +29,13 @@ from chart_utils import (
 _CONTRACTS = None
 _TOTAL_HOURS = None
 
+ROOT = Path(__file__).resolve().parent.parent
+
 MAX_ORDERS  = 3
 BASE_SIZE   = 50.0
 DEFAULT_CSV_PATHS = [
-    "Datas/csv/ETH.csv",
-    "reportLive/safeChase/ETH.csv",
+    str(ROOT / "Datas" / "csv" / "ETH.csv"),
+    str(ROOT / "reportLive" / "safeChase" / "ETH.csv"),
 ]
 DEFAULT_N_WORKERS = max(1, mp.cpu_count() - 2)
 CB_WINDOW_S = 5400
@@ -43,43 +45,19 @@ CNET_N_LIST = [2, 5, 10]
 
 def build_configs():
     configs = []
-
-    # Groupe A : lineaire, sans filtre vol
-    for slope in [0.02, 0.05, 0.10, 0.20]:
-        for intercept in [0.0, 0.5, 1.0, 2.0]:
-            for cap in CAP_GRID:
-                configs.append(dict(
-                    label='linear', curve='linear',
-                    slope=slope, intercept=intercept,
-                    A_exp=None, tau=None,
-                    eq_cap=cap, max_losses_cb=None,
-                    vol_lb_h=None, vol_thresh=None,
-                ))
-
-    # Groupe D : filtre range + lineaire
-    for slope in [0.02, 0.05, 0.10, 0.20]:
-        for intercept in [0.0, 1.0]:
-            for cap in CAP_GRID:
-                for lb in [1, 2, 4, 8]:
-                    for thresh in [15.0, 25.0, 40.0]:
-                        configs.append(dict(
-                            label='vol_linear', curve='linear',
-                            slope=slope, intercept=intercept,
-                            A_exp=None, tau=None,
-                            eq_cap=cap, max_losses_cb=None,
-                            vol_lb_h=float(lb), vol_thresh=thresh,
-                            vol_type='range',
-                        ))
+    slope_grid = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
+    intercept_grid = [0.0, 0.1, 0.2, 0.5, 1.0]
 
     # Groupe D2 : filtre net move + lineaire
-    for slope in [0.02, 0.05, 0.10, 0.20]:
-        for intercept in [0.0, 1.0]:
+    for slope in slope_grid:
+        for intercept in intercept_grid:
             for cap in CAP_GRID:
                 for lb in [1, 2, 4, 8]:
                     for thresh in [8.0, 18.0, 36.0]:
                         configs.append(dict(
                             label='vol_net_lin', curve='linear',
                             slope=slope, intercept=intercept,
+                            intercept_mode='floor',
                             A_exp=None, tau=None,
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=float(lb), vol_thresh=thresh,
@@ -87,14 +65,15 @@ def build_configs():
                         ))
 
     # Groupe D3 : trend ratio + lineaire
-    for slope in [0.02, 0.05, 0.10, 0.20]:
-        for intercept in [0.0, 1.0]:
+    for slope in slope_grid:
+        for intercept in intercept_grid:
             for cap in CAP_GRID:
                 for lb in [1, 2, 4, 8]:
                     for thresh in [0.3, 0.5, 0.7]:
                         configs.append(dict(
                             label='vol_trend_lin', curve='linear',
                             slope=slope, intercept=intercept,
+                            intercept_mode='floor',
                             A_exp=None, tau=None,
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=float(lb), vol_thresh=thresh,
@@ -105,33 +84,36 @@ def build_configs():
     # base hardcodee sur vol mediane ETH par lookback
     VRS_BASE_ETH = {1.0: 8.0, 2.0: 15.0, 4.0: 25.0}
     for lb, base in VRS_BASE_ETH.items():
-        for slope in [0.05, 0.10]:
-            for cap in CAP_GRID:
-                for g_min in [0.5, 0.75]:
-                    for g_max in [1.5, 2.5, 4.0]:
-                        configs.append(dict(
-                            label='vrs_lin', curve='linear',
-                            slope=slope, intercept=0.0,
-                            A_exp=None, tau=None,
-                            eq_cap=cap, max_losses_cb=None,
-                            vol_lb_h=None, vol_thresh=None,
-                            vrs_enabled=True,
-                            vrs_lb=float(lb),
-                            vrs_base=float(base),
-                            vrs_g_min=float(g_min),
-                            vrs_g_max=float(g_max),
-                        ))
+        for slope in slope_grid:
+            for intercept in intercept_grid:
+                for cap in CAP_GRID:
+                    for g_min in [0.5, 0.75]:
+                        for g_max in [1.5, 2.5, 4.0]:
+                            configs.append(dict(
+                                label='vrs_lin', curve='linear',
+                                slope=slope, intercept=intercept,
+                                intercept_mode='floor',
+                                A_exp=None, tau=None,
+                                eq_cap=cap, max_losses_cb=None,
+                                vol_lb_h=None, vol_thresh=None,
+                                vrs_enabled=True,
+                                vrs_lb=float(lb),
+                                vrs_base=float(base),
+                                vrs_g_min=float(g_min),
+                                vrs_g_max=float(g_max),
+                            ))
 
     # Groupe cnet : filtre candle-net (N bougies M5)
     CNET_THRESH_ETH = [0.3, 0.5, 1.0, 2.0]
-    for slope in [0.05, 0.10, 0.20]:
-        for intercept in [0.0, 1.0]:
+    for slope in slope_grid:
+        for intercept in intercept_grid:
             for cap in CAP_GRID:
                 for n in CNET_N_LIST:
                     for thresh in CNET_THRESH_ETH:
                         configs.append(dict(
                             label='cnet_lin', curve='linear',
                             slope=slope, intercept=intercept,
+                            intercept_mode='floor',
                             A_exp=None, tau=None,
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=None, vol_thresh=None,
@@ -339,7 +321,9 @@ def fmt_row(i, r, days):
             f"g={r['vrs_g_min']:.2f}-{r['vrs_g_max']:.2f}"
         )
     elif r.get('cnet_n') is not None:
-        vol_s = f"cnet{r['cnet_n']}c>${r['cnet_thresh']:.0f}           "
+        ct = r['cnet_thresh']
+        ct_s = f"{ct:.2g}" if ct != int(ct) else f"{int(ct)}"
+        vol_s = f"cnet{r['cnet_n']}c>${ct_s}           "
     else:
         vol_s = "              -"
     rf_s  = f"{r['rf']:>6.1f}x" if r['max_dd'] > 0 else f"{r['rf']:>5.1f}x*"
@@ -358,7 +342,7 @@ def main():
         "--csv",
         nargs="+",
         metavar="PATH",
-        help="Fichier(s) CSV (colonnes m5_*). Par defaut: Datas/csv/ETH.csv + reportLive/safeChase/60_lb0.5h/ETH.csv.",
+        help="Fichier(s) CSV (colonnes m5_*). Par défaut: Datas/csv/ETH.csv + reportLive/safeChase/ETH.csv.",
     )
     parser.add_argument(
         "--workers",
@@ -370,6 +354,13 @@ def main():
         "--threads",
         action="store_true",
         help="Threads (1 copie RAM, GIL). Defaut: processus multi-coeur + snapshot disque.",
+    )
+    parser.add_argument(
+        "--batch",
+        type=int,
+        default=64,
+        metavar="N",
+        help="Nombre de configs par lot. Petits lots = meilleur équilibre entre workers (défaut: 64).",
     )
     args = parser.parse_args()
     csv_paths = _resolve_csv_paths(args.csv) if args.csv else DEFAULT_CSV_PATHS
@@ -390,11 +381,14 @@ def main():
 
     t0 = time.time()
     configs = build_configs()
+    batch_n = max(1, int(args.batch))
+    batches = [configs[i : i + batch_n] for i in range(0, len(configs), batch_n)]
     print(f"[{run_started.strftime('%H:%M:%S')}] ETH Curve Optimizer v1")
     print(f"  Sortie: {run_dir.resolve()}")
     backend = "threads" if args.threads else "processus"
     print(
-        f"  Workers={n_workers}  Backend={backend}  Configs={len(configs)}  Tri=RF  $50/ordre",
+        f"  Workers={n_workers}  Backend={backend}  Configs={len(configs)}  "
+        f"Lots={len(batches)} (batch={batch_n})  Tri=RF  $50/ordre",
         flush=True,
     )
     print(f"  CSV: {csv_paths}\n")
@@ -403,18 +397,25 @@ def main():
     n_ct = load_contracts_dataset(csv_paths)
     print(f"  Contrats charges: {n_ct}  ({time.time() - t_load:.1f}s)", flush=True)
 
-    batch_size = max(1, len(configs) // n_workers + 1)
-    batches = [configs[i : i + batch_size] for i in range(0, len(configs), batch_size)]
-
     all_results = []
+    t_run = time.monotonic()
     if args.threads:
-        print("  (threads: memoire partagee, CPU souvent faible)\n", flush=True)
+        print("  (threads: memoire partagee, petits lots, workers dynamiques)\n", flush=True)
+        print(
+            "  (aucune ligne tant que le 1er lot n'est pas fini — normal si chargement long)\n",
+            flush=True,
+        )
         with ThreadPoolExecutor(max_workers=n_workers) as ex:
             futures = [ex.submit(worker_fn, b) for b in batches]
-            for i, fut in enumerate(as_completed(futures), 1):
+            done = 0
+            for fut in as_completed(futures):
                 all_results.extend(fut.result())
+                done += 1
+                pct = 100.0 * done / len(batches)
+                eta_s = (time.monotonic() - t_run) / done * (len(batches) - done)
                 print(
-                    f"  [{datetime.now().strftime('%H:%M:%S')}] batch {i}/{len(batches)} — {len(all_results)} configs",
+                    f"  {pct:5.1f}%  lots {done}/{len(batches)}  "
+                    f"{len(all_results):>5d} configs  ETA {eta_s / 60:.1f}min",
                     flush=True,
                 )
     else:
@@ -433,17 +434,36 @@ def main():
         )
         _CONTRACTS = None
         _TOTAL_HOURS = None
-        print("  (processus: multi-coeur)\n", flush=True)
+        print("  (processus: petits lots, pool dynamique)\n", flush=True)
+        print(
+            "  (aucune ligne tant que le 1er lot n'est pas fini — normal ; ETA ensuite, une ligne par lot)\n",
+            flush=True,
+        )
         try:
             with mp.Pool(
                 processes=n_workers,
                 initializer=_init_worker_from_pickle,
                 initargs=(str(payload_path.resolve()),),
             ) as pool:
-                for i, br in enumerate(pool.imap_unordered(worker_fn, batches)):
-                    all_results.extend(br)
+                futures_mp = [pool.apply_async(worker_fn, (b,)) for b in batches]
+                done = 0
+                for fut in futures_mp:
+                    try:
+                        br = fut.get(timeout=3600)
+                        all_results.extend(br)
+                    except Exception as e:
+                        print(f"  [WARN] lot échoué ({e}), retry direct...", flush=True)
+                        try:
+                            br = worker_fn(batches[done])
+                            all_results.extend(br)
+                        except Exception as e2:
+                            print(f"  [WARN] retry échoué aussi: {e2}", flush=True)
+                    done += 1
+                    pct = 100.0 * done / len(batches)
+                    eta_s = (time.monotonic() - t_run) / done * (len(batches) - done) if done else 0
                     print(
-                        f"  [{datetime.now().strftime('%H:%M:%S')}] batch {i+1}/{len(batches)} — {len(all_results)} configs",
+                        f"  {pct:5.1f}%  lots {done}/{len(batches)}  "
+                        f"{len(all_results):>5d} configs  ETA {eta_s / 60:.1f}min",
                         flush=True,
                     )
         finally:
@@ -489,6 +509,24 @@ def main():
     for i, r in enumerate(by_consist[:20]):
         lines.append(fmt_row(i+1, r, days))
 
+    def synth_line(title, r):
+        if r is None:
+            return f"{title}: N/A\n"
+        return (
+            f"{title}: {r['label']} | sl={r['slope']:.3f} floor={r['intercept']:.1f} "
+            f"cap={r['eq_cap']:.2f} | trades={r['trades']} | trades/j={r['trades']/days:.1f} "
+            f"| $/j={r['total_pnl']/days:.1f} | WR={r['wr']:.1f}% "
+            f"| RF={r['rf']:.1f}x | maxDD=${r['max_dd']:.0f}\n"
+        )
+
+    best_global = all_results[0] if all_results else None
+    best_consistent = by_consist[0] if by_consist else None
+    best_frequent = max(all_results, key=lambda x: x['trades']) if all_results else None
+    lines.append(f"\n>>> SYNTHESE FINALE\n{sep}")
+    lines.append(synth_line("Best global RF", best_global))
+    lines.append(synth_line("Best consistency", best_consistent))
+    lines.append(synth_line("Most trades", best_frequent))
+
     output = "".join(lines)
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(output)
@@ -516,4 +554,5 @@ def main():
 
 
 if __name__ == "__main__":
+    mp.freeze_support()
     main()

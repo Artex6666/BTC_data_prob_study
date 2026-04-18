@@ -34,7 +34,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from chart_utils import load_contracts, precompute_vol, VOL_LBS
 import chart_utils as cu
 
-BASE_DIR = Path(__file__).resolve().parent.parent / "reportLive" / "safeChase"
+ROOT_DIR = Path(__file__).resolve().parent.parent
+LIVE_CSV_DIR = ROOT_DIR / "reportLive" / "safeChase"
+ARCHIVE_CSV_DIR = ROOT_DIR / "Datas" / "csv"
 
 # ── Configs par crypto ─────────────────────────────────────────────────────────
 CRYPTO_CONFIGS = {
@@ -44,46 +46,41 @@ CRYPTO_CONFIGS = {
             vol_lb_h=1, vol_thresh=60.0, vol_type='net',
             max_losses_cb=None, max_orders=2,
         ),
-        'size': 100.0,
+        'size': 120.0,
         'csv':  'BTC.csv',
         'label': 'BTC — vol_net_lin slope=7 cap=0.75 net1h>$60',
         'live_dir': 'slope7cap75/btc',
     },
     'eth': {
         'cfg': dict(
-            curve='linear', slope=0.20, intercept=0.0,
-            eq_cap=0.60,
-            vol_lb_h=2.0, vol_thresh=0.50, vol_type='trend',
-            max_losses_cb=None, max_orders=1,
+            curve='linear', slope=0.20, intercept=0.0, eq_cap=0.85,
+            vol_lb_h=2.0, vol_thresh=0.30, vol_type='trend',
+            max_losses_cb=None, max_orders=2,
         ),
-        'size': 150.0,
+        'size': 130.0,
         'csv':  'ETH.csv',
-        'label': 'ETH — slope=0.2 trend>0.5 cap=0.60',
+        'label': 'ETH — slope=0.2 trend2h>0.3 cap=0.85',
         'live_dir': 'slope0.2int0trend0.5/eth',
     },
     'sol': {
         'cfg': dict(
-            curve='linear', slope=10.0, intercept=0.0, eq_cap=0.55,
-            vol_lb_h=None, vol_thresh=None,
-            vrs_enabled=True, vrs_lb=1.0, vrs_base=150.0,
-            vrs_g_min=0.5, vrs_g_max=1.5,
-            max_losses_cb=None, max_orders=2,
+            curve='linear', slope=0.005, intercept=0.0, eq_cap=0.75,
+            vol_lb_h=1.0, vol_thresh=0.50, vol_type='pct_range',
+            max_losses_cb=None, max_orders=3,
         ),
-        'size': 100.0,
+        'size': 50.0,
         'csv':  'SOL.csv',
-        'label': 'SOL — VRS slope=10 cap=0.55',
+        'label': 'SOL — slope=0.005 pct_range1h>0.50 cap=0.75',
     },
     'xrp': {
         'cfg': dict(
-            curve='linear', slope=10.0, intercept=0.0, eq_cap=0.55,
-            vol_lb_h=None, vol_thresh=None,
-            vrs_enabled=True, vrs_lb=1.0, vrs_base=150.0,
-            vrs_g_min=0.5, vrs_g_max=1.5,
-            max_losses_cb=None, max_orders=2,
+            curve='linear', slope=0.0001, intercept=0.0, eq_cap=0.65,
+            vol_lb_h=2.0, vol_thresh=0.50, vol_type='trend',
+            max_losses_cb=None, max_orders=3,
         ),
-        'size': 100.0,
+        'size': 40.0,
         'csv':  'XRP.csv',
-        'label': 'XRP — VRS slope=10 cap=0.55',
+        'label': 'XRP — slope=0.0001 trend2h>0.50 cap=0.65',
     },
     'bnb': {
         'cfg': dict(
@@ -98,6 +95,17 @@ CRYPTO_CONFIGS = {
         'label': 'BNB — VRS slope=10 cap=0.55',
     },
 }
+
+
+def resolve_csv_paths(csv_name: str) -> list[str]:
+    paths: list[str] = []
+    archive = ARCHIVE_CSV_DIR / csv_name
+    live = LIVE_CSV_DIR / csv_name
+    if archive.exists():
+        paths.append(str(archive))
+    if live.exists():
+        paths.append(str(live))
+    return paths
 
 TF_KEY_MAP = {
     '5m': '5min', '15m': '15min', '1h': '1h',
@@ -215,17 +223,19 @@ def find_contract(crypto, tf_floor, ce_ts, cfg_override=None):
     Si tf_floor est None, cherche parmi tous les TF et prend le plus proche.
     """
     conf = CRYPTO_CONFIGS[crypto]
-    csv_path = str(BASE_DIR / conf['csv'])
+    csv_paths = resolve_csv_paths(conf['csv'])
     cfg      = cfg_override or conf['cfg']
     size     = conf['size']
     cu.BASE_SIZE = size
 
-    if not Path(csv_path).exists():
-        raise FileNotFoundError(f"CSV introuvable : {csv_path}")
+    if not csv_paths:
+        raise FileNotFoundError(
+            f"CSV introuvable : ni {ARCHIVE_CSV_DIR / conf['csv']} ni {LIVE_CSV_DIR / conf['csv']}"
+        )
 
     # Charge M5 en premier (vol ref pour M15/H1, et VRS lookup)
     print(f"Chargement {conf['csv']}...")
-    m5_cts = load_contracts([csv_path], '5min', *TF_COLS['5min'])
+    m5_cts = load_contracts(csv_paths, '5min', *TF_COLS['5min'])
     precompute_vol(m5_cts, VOL_LBS)
 
     tfs_to_try = [tf_floor] if tf_floor else ALL_TF_KEYS
@@ -238,7 +248,7 @@ def find_contract(crypto, tf_floor, ce_ts, cfg_override=None):
         if tf == '5min':
             cts = m5_cts
         else:
-            cts = load_contracts([csv_path], tf, *TF_COLS[tf])
+            cts = load_contracts(csv_paths, tf, *TF_COLS[tf])
             precompute_vol(cts, VOL_LBS, ref_contracts=m5_cts)
 
         for c in cts:
@@ -536,12 +546,27 @@ def run_trace(c, cfg, base_size, show_all_ticks=False):
     total_shares_up = shares_up
     total_shares_down = shares_down
     has_fills = total_cost > 0
+    up_fill_count = sum(1 for f in fills if f.get('side') == 'UP')
+    down_fill_count = sum(1 for f in fills if f.get('side') == 'DOWN')
+    avg_price_up = (cost_up / shares_up) if shares_up > 1e-12 else None
+    avg_price_down = (cost_down / shares_down) if shares_down > 1e-12 else None
+    avg_price_total = ((total_cost / (shares_up + shares_down))
+                       if (shares_up + shares_down) > 1e-12 else None)
+    pnl_if_up = shares_up - total_cost
+    pnl_if_down = shares_down - total_cost
 
     if has_fills:
-        payout = (shares_up if won_up else 0.0) + (shares_down if not won_up else 0.0)
+        payout = shares_up if won_up else shares_down
         pnl = payout - total_cost
         won = pnl > 0
-        fill_side = 'UP' if shares_up > shares_down else 'DOWN'
+        if shares_up > 0 and shares_down > 0:
+            fill_side = 'BOTH'
+        elif shares_up > 0:
+            fill_side = 'UP'
+        elif shares_down > 0:
+            fill_side = 'DOWN'
+        else:
+            fill_side = None
 
         # MFE par fill
         for f in fills:
@@ -569,7 +594,18 @@ def run_trace(c, cfg, base_size, show_all_ticks=False):
         'fill_side':        fill_side,
         'contract_cost':    contract_cost,
         'contract_shares':  contract_shares,
-        'avg_fill_price':   (sum(f['price'] for f in fills) / len(fills)) if fills else None,
+        'avg_fill_price':   avg_price_total,
+        'up_fill_count':    up_fill_count,
+        'down_fill_count':  down_fill_count,
+        'cost_up':          cost_up,
+        'cost_down':        cost_down,
+        'shares_up':        shares_up,
+        'shares_down':      shares_down,
+        'avg_fill_price_up':    avg_price_up,
+        'avg_fill_price_down':  avg_price_down,
+        'avg_fill_price_total': avg_price_total,
+        'pnl_if_up':        pnl_if_up,
+        'pnl_if_down':      pnl_if_down,
         'won_up':           won_up,
         'direction_real':   'UP' if won_up else 'DOWN',
         'direction_spot':   'UP' if float(spots[-1]) > op else 'DOWN',
@@ -678,12 +714,24 @@ def print_stats(c, result, cfg, base_size, tf_floor, crypto):
                 print(f"  Raison : signal jamais atteint OU bid jamais sous ordre-0.01")
     else:
         print(f"  Nombre de fills   : {result['fill_count']}")
-        print(f"  Côté tradé        : {result['fill_side']}")
+        print(f"  Profil d'inventaire : {result['fill_side']}")
         print(f"  Taille/fill (USD) : ${base_size:.2f}")
+        print(f"  Fills UP / DOWN   : {result['up_fill_count']} / {result['down_fill_count']}")
+        print(f"  Shares UP         : {result['shares_up']:.4f}")
+        print(f"  Shares DOWN       : {result['shares_down']:.4f}")
+        print(f"  Cost UP           : ${result['cost_up']:.2f}")
+        print(f"  Cost DOWN         : ${result['cost_down']:.2f}")
+        print(f"  Avg cost UP       : "
+              f"{f'{result['avg_fill_price_up']:.4f}' if result['avg_fill_price_up'] is not None else 'N/A'}")
+        print(f"  Avg cost DOWN     : "
+              f"{f'{result['avg_fill_price_down']:.4f}' if result['avg_fill_price_down'] is not None else 'N/A'}")
+        print(f"  Avg cost total    : "
+              f"{f'{result['avg_fill_price_total']:.4f}' if result['avg_fill_price_total'] is not None else 'N/A'}")
         print()
         for i, f in enumerate(fills, 1):
             tag = "  [EXPIRY FILL]" if f.get('expiry_fill') else ""
             print(f"  Fill #{i}:{tag}")
+            print(f"    Side          : {f.get('side', '?')}")
             print(f"    Timestamp     : {f.get('ts', 'expiry')}")
             print(f"    Remain        : {f.get('remain', 0.0):.2f}s")
             print(f"    Prix fill     : {f['price']:.4f}")
@@ -708,52 +756,47 @@ def print_stats(c, result, cfg, base_size, tf_floor, crypto):
             print(f"    Shares        : {float(shares):.4f}")
             print(f"    Max bid after : {f.get('max_bid_after', f['price']):.4f}  (MFE={f.get('mfe', 0):.4f})")
 
-        avg_fill = result['contract_cost'] / result['fill_count'] / base_size
-        # Recalcul propre du prix moyen pondéré
-        avg_price = result['contract_cost'] / result['contract_shares']
         print()
-        print(f"  Prix moyen fill   : {avg_price:.4f}")
         print(f"  Coût total        : ${result['contract_cost']:.2f}")
         print(f"  Shares totales    : {result['contract_shares']:.4f}")
 
     # ── PnL ──
     print(f"\n{'─'*35} PNL {'─'*29}")
     if result['won'] is not None:
-        won      = result['won']
-        pnl      = result['pnl']
-        shares   = result['contract_shares']
-        cost     = result['contract_cost']
+        won       = result['won']
+        pnl       = result['pnl']
+        cost      = result['contract_cost']
         dir_real  = result['direction_real']   # résolution marché (last ask)
         dir_spot  = result['direction_spot']    # mouvement spot
         dir_trad  = result['fill_side']
+        pnl_if_up = result['pnl_if_up']
+        pnl_if_down = result['pnl_if_down']
 
-        print(f"  Direction tradée   : {dir_trad}")
+        print(f"  Profil tradé       : {dir_trad}")
         print(f"  Direction spot     : {dir_spot}  (close {cl:.2f} vs open {op:.2f})")
         print(f"  Résolution marché  : {dir_real}  (via last ask CSV)")
-        print(f"  Résultat           : {'WIN ✓' if won else 'LOSS ✗'}  (tradé {dir_trad}, marché={dir_real})")
+        print(f"  PnL si résolution UP   : ${pnl_if_up:.2f}")
+        print(f"  PnL si résolution DOWN : ${pnl_if_down:.2f}")
+        print(f"  Résultat réalisé       : {'WIN ✓' if won else 'LOSS ✗'}  (marché={dir_real})")
         if dir_real != dir_spot:
             print(f"  [!] Spot et résolution divergent — le last tick CSV n'est pas "
                   f"le vrai prix de clôture Chainlink")
         print()
-        if won:
-            print(f"  Shares encaissées : {shares:.4f}")
-            print(f"  Coût dépensé      : ${cost:.2f}")
-            print(f"  PnL brut          : ${shares:.4f} - ${cost:.2f} = ${pnl:.2f}")
-        else:
-            print(f"  Shares perdues    : {shares:.4f}")
-            print(f"  Coût dépensé      : ${cost:.2f}")
-            print(f"  PnL               : -${cost:.2f} (perte totale)")
-
-        print(f"\n  PNL NET           : ${pnl:.2f}")
+        print(f"  Shares UP encaissables   : {result['shares_up']:.4f}")
+        print(f"  Shares DOWN encaissables : {result['shares_down']:.4f}")
+        print(f"  Coût total dépensé       : ${cost:.2f}")
+        print(f"  PNL TOTAL réalisé        : ${pnl:.2f}")
 
         # Expected PnL si win garanti
         for f in fills:
             p = f['price']
-            exp_win = (base_size / p) - base_size
-            exp_loss = -base_size
+            exp_win = (float(f.get('shares', base_size / p)) * 1.0) - float(f.get('cost', base_size))
+            exp_loss = -float(f.get('cost', base_size))
             mfill = f.get('max_bid_after', p)
-            mfe_pnl = (base_size / p) * mfill - base_size
-            print(f"\n  Fill @ {p:.4f}  →  si WIN: +${exp_win:.2f} | si LOSS: -${base_size:.2f}")
+            shares = float(f.get('shares', base_size / p))
+            cost_f = float(f.get('cost', base_size))
+            mfe_pnl = shares * mfill - cost_f
+            print(f"\n  Fill {f.get('side', '?')} @ {p:.4f}  →  si WIN: +${exp_win:.2f} | si LOSS: ${exp_loss:.2f}")
             print(f"    Max bid after fill : {mfill:.4f} → PnL potentiel max : ${mfe_pnl:.2f}")
     else:
         print(f"  Aucun fill → PnL = $0.00")
@@ -783,7 +826,7 @@ def find_live_jsonl(ce_utc: datetime, tf_floor: str, crypto: str):
         return None
 
     tf_slug = TF_SLUG.get(tf_floor, 'm5')
-    live_dir = BASE_DIR / live_dir_rel / tf_slug
+    live_dir = LIVE_CSV_DIR / live_dir_rel / tf_slug
     if not live_dir.exists():
         return None
 
@@ -829,7 +872,8 @@ def parse_live_jsonl(path: Path):
     wo  = get('window_open')
     ws  = get('window_start')
     trg = get('safety_trigger')
-    we  = get('window_ended')
+    # Nouveau format : window_settled remplace window_ended ; window_closed en fallback intermédiaire
+    we  = get('window_settled') or get('window_closed') or get('window_ended')
     placements  = get_all('chase_placed')
     snapshots   = get_all('dashboard_snapshot')
     deactivates = get_all('safety_deactivate') or []
@@ -913,20 +957,31 @@ def print_live_comparison(bt_result, live, c, cfg, base_size, tf_floor, crypto):
     else:
         print("  window_open manquant dans le JSONL")
 
-    # ── VRS live ──
-    if ws and cfg.get('vrs_enabled'):
-        print(f"\n{'─'*35} VRS LIVE {'─'*24}")
-        print(f"  btc_vrs_range_usd : {ws.get('btc_vrs_range_usd', '?')}")
-        print(f"  btc_vrs_g         : {ws.get('btc_vrs_g', '?')}")
+    # ── Stratégie live (window_start) ──
+    if ws:
+        strategy = ws.get('strategy', '')
+        print(f"\n{'─'*35} STRATÉGIE LIVE {'─'*18}")
+        print(f"  strategy          : {strategy or '(ancien format)'}")
         print(f"  slope_effective   : {ws.get('slope_effective', '?')}")
+        print(f"  intercept         : {ws.get('intercept', '?')}")
         print(f"  max_chase_price   : {ws.get('max_chase_price', '?')}")
         print(f"  min_bid           : {ws.get('min_bid', '?')}")
-        bt_g = bt_result['g_final']
-        live_g = float(ws.get('btc_vrs_g', bt_g))
-        if abs(live_g - bt_g) > 0.001:
-            print(f"  [!] g divergence : live={live_g:.4f} vs BT={bt_g:.4f}")
-        else:
-            print(f"  [OK] g coherent  : live={live_g:.4f} == BT={bt_g:.4f}")
+        print(f"  order_size_usd    : {ws.get('order_size_usd', '?')}")
+        # Filtre vol (vol_net_lin / vol_rng_lin)
+        if ws.get('vol_1h_net_usd') is not None:
+            print(f"  vol_1h_net_usd    : {ws.get('vol_1h_net_usd')}")
+            print(f"  vol_1h_range_usd  : {ws.get('vol_1h_range_usd')}")
+            print(f"  vol_thresh        : {ws.get('vol_thresh')}")
+        # VRS
+        if ws.get('btc_vrs_g') is not None:
+            bt_g   = bt_result['g_final']
+            live_g = float(ws.get('btc_vrs_g', bt_g))
+            print(f"  btc_vrs_range_usd : {ws.get('btc_vrs_range_usd', '?')}")
+            print(f"  btc_vrs_g         : {live_g:.4f}")
+            if abs(live_g - bt_g) > 0.001:
+                print(f"  [!] g divergence : live={live_g:.4f} vs BT={bt_g:.4f}")
+            else:
+                print(f"  [OK] g coherent  : live={live_g:.4f} == BT={bt_g:.4f}")
 
     # ── Trigger ──
     print(f"\n{'─'*35} TRIGGER {'─'*25}")
@@ -943,7 +998,8 @@ def print_live_comparison(bt_result, live, c, cfg, base_size, tf_floor, crypto):
         live_trg_tte  = float(trg.get('time_to_expiry_s', 0))
         live_trg_side = trg.get('side', '?')
         live_trg_ts   = trg.get('ts', '?')[:22]
-        live_trg_spot = float(trg.get('btc_price', trg.get('eth_price', 0)) or 0)
+        # Nouveau format : spot_price ; anciens formats : btc_price / eth_price
+        live_trg_spot = float(trg.get('spot_price', trg.get('btc_price', trg.get('eth_price', 0))) or 0)
         binance_p     = float(trg.get('binance_price', 0) or 0)
         chainlink_p   = float(trg.get('chainlink_price', 0) or 0)
 
@@ -1084,17 +1140,22 @@ def print_live_comparison(bt_result, live, c, cfg, base_size, tf_floor, crypto):
         start    = float(we.get('start_spot', 0) or 0)
         cl_price = float(we.get('chainlink_price', 0) or 0)
         sy_price = float(we.get('synthetic_price', 0) or 0)
-        print(f"  Spot open  : {start:.4f}")
-        print(f"  Spot close : {end_spot:.4f}  ({'+' if end_spot > start else ''}{end_spot-start:.4f})")
-        print(f"  Chainlink  : {cl_price:.4f}  → {'UP' if cl_price > start else 'DOWN'}")
-        print(f"  Synthetic  : {sy_price:.4f}  → {'UP' if sy_price > start else 'DOWN'}")
+        cl_open_disp = float(wo.get('chainlink', 0)) if wo else 0.0
+        print(f"  Spot open    : {start:.4f}  (Binance)")
+        print(f"  Chainlink@open: {cl_open_disp:.4f}")
+        print(f"  Spot close   : {end_spot:.4f}  ({'+' if end_spot > start else ''}{end_spot-start:.4f})")
+        print(f"  Chainlink@close: {cl_price:.4f}  → {'UP' if (cl_price > cl_open_disp if cl_open_disp else cl_price > start) else 'DOWN'}  (vs Chainlink@open)")
+        print(f"  Synthetic  : {sy_price:.4f}")
         bt_dir_ask  = dir_real   # basé sur last ask CSV
         bt_dir_spot = bt_result['direction_spot']
         print(f"  BT résolution (last ask)  : {bt_dir_ask}")
         print(f"  BT direction spot         : {bt_dir_spot}")
         if bt_dir_ask != bt_dir_spot:
             print(f"  [!] BT spot/ask divergent — last CSV tick ≠ vraie clôture")
-        live_dir_final = 'UP' if cl_price > start else 'DOWN'
+        # Polymarket règle Chainlink-close vs Chainlink-open (pas vs Binance open)
+        cl_open = float(wo.get('chainlink', 0)) if wo else 0.0
+        cl_ref  = cl_open if cl_open > 0 else start
+        live_dir_final = 'UP' if cl_price > cl_ref else 'DOWN'
         if live_dir_final != bt_dir_ask:
             print(f"  [!!] DIVERGENCE RÉSOLUTION : live={live_dir_final} vs BT={dir_real}")
             print(f"       Chainlink vs Binance divergence → possible cause de loss/win flip")

@@ -1,0 +1,68 @@
+{
+  "asset": "btc",
+  "rows": 190604,
+  "buy_rows": 22054,
+  "markets": 694,
+  "patterns": {
+    "btc|h1|Down": {
+      "n_buys": 2030,
+      "weighted_aligned": 0.8225948678273725,
+      "weighted_recross": 0.9271852114809797,
+      "median_signed_open_pct": 0.005771008182459656,
+      "median_signed_move_30s_pct": 0.008476864863803193,
+      "median_ask_c": 52.0,
+      "median_elapsed_frac": 0.5766562500000001,
+      "median_buy_cost_usd": 14.075
+    },
+    "btc|h1|Up": {
+      "n_buys": 2230,
+      "weighted_aligned": 0.7949603860195008,
+      "weighted_recross": 0.9239293026657716,
+      "median_signed_open_pct": -0.005778454644637521,
+      "median_signed_move_30s_pct": 0.006741590029003673,
+      "median_ask_c": 48.0,
+      "median_elapsed_frac": 0.5840031944444445,
+      "median_buy_cost_usd": 12.870000000000001
+    },
+    "btc|m15|Down": {
+      "n_buys": 3991,
+      "weighted_aligned": 0.7822500765619883,
+      "weighted_recross": 0.7186583137181226,
+      "median_signed_open_pct": -0.005701323380405422,
+      "median_signed_move_30s_pct": 0.0,
+      "median_ask_c": 44.0,
+      "median_elapsed_frac": 0.6180822222222222,
+      "median_buy_cost_usd": 11.2
+    },
+    "btc|m15|Up": {
+      "n_buys": 3371,
+      "weighted_aligned": 0.6918406853435652,
+      "weighted_recross": 0.6172957113707753,
+      "median_signed_open_pct": -0.005577564255275512,
+      "median_signed_move_30s_pct": 0.0,
+      "median_ask_c": 49.0,
+      "median_elapsed_frac": 0.5585511111111111,
+      "median_buy_cost_usd": 16.299999999999997
+    },
+    "btc|m5|Down": {
+      "n_buys": 5406,
+      "weighted_aligned": 0.7159240770339755,
+      "weighted_recross": 0.6104705460438491,
+      "median_signed_open_pct": 0.00224115433708347,
+      "median_signed_move_30s_pct": 0.0,
+      "median_ask_c": 52.0,
+      "median_elapsed_frac": 0.5431366666666667,
+      "median_buy_cost_usd": 23.43
+    },
+    "btc|m5|Up": {
+      "n_buys": 5026,
+      "weighted_aligned": 0.6193403466062671,
+      "weighted_recross": 0.5370330911408204,
+      "median_signed_open_pct": -0.0013965486528398096,
+      "median_signed_move_30s_pct": 0.0,
+      "median_ask_c": 50.0,
+      "median_elapsed_frac": 0.5632616666666667,
+      "median_buy_cost_usd": 23.925
+    }
+  }
+}

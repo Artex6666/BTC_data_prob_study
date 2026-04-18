@@ -1,11 +1,15 @@
 """
 analyze_live_vs_bt.py — Comparaison exhaustive Live vs Backtest (BTC + ETH)
 
-Sources live : reportLive/safeChase/slope3int0cap70/{btc,eth}/{m5,m15,h1}/
-Sources BT   : reportLive/safeChase/{BTC,ETH}.csv (même CSV que le live)
+Sources live BTC : reportLive/safeChase/slope7cap75/btc/{m5,m15,h1}/
+  PnL live BTC résolu via settlement.csv (comme gen_live_vs_bt_recap.py), pas expected_pnl jsonl.
+Sources live ETH : reportLive/safeChase/slope3int0cap70/eth/
+Sources BT       : reportLive/safeChase/{BTC,ETH}.csv
+
+Cutoff : identique à gen_live_vs_bt_recap (déploiement slope7cap75).
 
 Configs :
-  BTC : vol_net_lin  sl=3.0  int=0  cap=0.70  net0.5h>60   max_orders=2  size=$100/ordre
+  BTC : vol_net_lin  sl=7.0  int=0  cap=0.75  net1h>60   max_orders=2  size=$100/ordre
   ETH : vol_trend_lin sl=0.20 int=0  cap=0.55  tre2h>0.50   max_orders=2  size=$150/ordre
 
 Sorties : live_vs_bt/
@@ -29,9 +33,10 @@ if hasattr(sys.stdout, "reconfigure"):
     try: sys.stdout.reconfigure(encoding="utf-8")
     except Exception: pass
 
-BASE     = Path(__file__).resolve().parent.parent
-LIVE_DIR = BASE / "reportLive" / "safeChase" / "slope3int0cap70"
-CSV_DIR  = BASE / "reportLive" / "safeChase"
+BASE          = Path(__file__).resolve().parent.parent
+LIVE_DIR_BTC  = BASE / "reportLive" / "safeChase" / "slope7cap75"
+LIVE_DIR_ETH  = BASE / "reportLive" / "safeChase" / "slope3int0cap70"
+CSV_DIR       = BASE / "reportLive" / "safeChase"
 OUT_DIR  = Path(__file__).resolve().parent / "live_vs_bt"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -43,17 +48,25 @@ from chart_utils import (
 )
 import chart_utils as cu
 
-CFG_BTC = dict(curve='linear', slope=3.0, intercept=0.0, eq_cap=0.70,
-               vol_lb_h=0.5, vol_thresh=60.0, vol_type='net',
+from gen_live_vs_bt_recap import (
+    CUTOFF_TS as RECAP_CUTOFF_TS,
+    _load_live_settlement,
+    parse_live as parse_live_btc_settlement,
+)
+
+CFG_BTC = dict(curve='linear', slope=7.0, intercept=0.0, eq_cap=0.75,
+               vol_lb_h=1.0, vol_thresh=60.0, vol_type='net',
                max_losses_cb=None, max_orders=2)
 CFG_ETH = dict(curve='linear', slope=0.20, intercept=0.0, eq_cap=0.55,
                vol_lb_h=2.0, vol_thresh=0.50, vol_type='trend',
                max_losses_cb=None, max_orders=2)
+BTC_CAP = CFG_BTC["eq_cap"]
+ETH_CAP = CFG_ETH["eq_cap"]
 BTC_SIZE = 100.0
 ETH_SIZE = 150.0
 
-# Cutoff : BTC → 2x$100 et ETH → 1x$150 cap=0.55 trend2h>0.50
-CUTOFF_TS = pd.Timestamp("2026-04-04T13:10:00", tz="UTC").timestamp()
+# Même cutoff que gen_live_vs_bt_recap.py (déploiement slope7cap75)
+CUTOFF_TS = RECAP_CUTOFF_TS
 
 # ── Parse live ────────────────────────────────────────────────────────────────
 def parse_live(asset_dir):
@@ -84,7 +97,7 @@ def parse_live(asset_dir):
                     elif ev == 'fill' and cur:
                         cur['fill'] = True
                         cur_fills.append(float(d.get('price', 0)))
-                    elif ev == 'window_ended' and cur:
+                    elif ev in ('window_ended', 'window_settled') and cur:
                         shares = float(d.get('up_shares', 0)) + float(d.get('down_shares', 0))
                         cost   = float(d.get('up_cost', 0))   + float(d.get('down_cost', 0))
                         pnl    = float(d.get('expected_pnl', 0))
@@ -218,6 +231,92 @@ def plot_equity_comparison(live_trades, bt_cum, bt_hi, bt_nh, bt_days,
     print(f"  -> {out_path}", flush=True)
 
 
+def _trade_ts_sec(ts):
+    if hasattr(ts, "timestamp"):
+        return float(ts.timestamp())
+    return float(pd.Timestamp(ts).timestamp())
+
+
+def plot_equity_btc_recap_style(live_trades, bt_trades, ref_ts, title, out_path, color_bt="#2196F3"):
+    """
+    Courbe equity BTC alignée sur gen_live_vs_bt_recap :
+    abscisse = heures réelles depuis ref_ts (pas d'étirement scale), cumuls trade à trade pour le BT.
+    """
+    def cum_xy(trades):
+        if not trades:
+            return np.array([]), np.array([])
+        tr = sorted(trades, key=lambda t: _trade_ts_sec(t["ts"]))
+        xs, ys = [], []
+        cum = 0.0
+        for t in tr:
+            cum += t["pnl"]
+            xs.append((_trade_ts_sec(t["ts"]) - ref_ts) / 3600.0)
+            ys.append(cum)
+        return np.array(xs), np.array(ys)
+
+    bx, by = cum_xy(bt_trades)
+    lx, ly = cum_xy(live_trades)
+    span_h = 0.0
+    if len(bx):
+        span_h = max(span_h, float(bx.max()))
+    if len(lx):
+        span_h = max(span_h, float(lx.max()))
+    span_h = max(span_h, 1e-6)
+    span_d = span_h / 24.0
+
+    dd_bt = (np.maximum.accumulate(by) - by) if len(by) else np.array([])
+    dd_lv = (np.maximum.accumulate(ly) - ly) if len(ly) else np.array([])
+
+    rf_bt = float(by[-1] / max(dd_bt.max(), 0.01)) if len(by) else 0.0
+    rf_lv = float(ly[-1] / max(dd_lv.max(), 0.01)) if len(ly) else 0.0
+
+    fig, axes = plt.subplots(2, 1, figsize=(16, 9), gridspec_kw={"height_ratios": [3, 1]})
+    if len(bx):
+        axes[0].plot(
+            bx,
+            by,
+            color=color_bt,
+            linewidth=1.6,
+            label=f"BT  ${by[-1]:,.0f}  (${by[-1]/span_d:.0f}/j)  RF={rf_bt:.1f}x",
+        )
+    if len(lx):
+        axes[0].plot(
+            lx,
+            ly,
+            color="#F44336",
+            linewidth=1.8,
+            linestyle="--",
+            label=f"LIVE  ${ly[-1]:,.2f}  (${ly[-1]/span_d:.0f}/j)  RF={rf_lv:.1f}x",
+        )
+        axes[1].plot(lx, dd_lv, color="#F44336", linewidth=1.2, linestyle="--", label="DD Live")
+    if len(bx):
+        axes[1].plot(bx, dd_bt, color=color_bt, linewidth=1.2, alpha=0.8, label="DD BT")
+
+    axes[0].axhline(0, color="gray", linewidth=0.5, linestyle="--")
+    axes[0].set_title(title, fontsize=11)
+    axes[0].set_ylabel("PnL cumulé ($)")
+    axes[0].legend(loc="upper left", fontsize=9)
+    axes[0].grid(alpha=0.3)
+    xh = np.arange(0, span_h + 2, 4)
+    axes[0].set_xticks(xh)
+    axes[0].set_xticklabels([f"{int(h)}h" for h in xh], fontsize=8, rotation=30)
+    axes[0].set_xlim(-0.2, span_h + 0.5)
+
+    axes[1].invert_yaxis()
+    axes[1].set_ylabel("Drawdown ($)")
+    axes[1].set_xlabel("Heures depuis cutoff (settlement live, BT=simulate_trade_log)")
+    axes[1].legend(loc="lower left", fontsize=8)
+    axes[1].grid(alpha=0.3)
+    axes[1].set_xticks(xh)
+    axes[1].set_xticklabels([f"{int(h)}h" for h in xh], fontsize=8, rotation=30)
+    axes[1].set_xlim(-0.2, span_h + 0.5)
+
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close("all")
+    print(f"  -> {out_path}", flush=True)
+
+
 # ── Graphique equity combiné ──────────────────────────────────────────────────
 def plot_combined(btc_live, eth_live, bt_btc, bt_eth, bt_hi, bt_nh, bt_days, out_path):
     x = np.arange(bt_nh)
@@ -254,8 +353,8 @@ def plot_fill_prices(btc_fills, eth_fills, btc_bt_trades, eth_bt_trades, out_pat
     fig.suptitle('Prix de fill : Live vs BT', fontsize=12)
 
     for col, (asset, live_f, bt_t, cap, color) in enumerate([
-        ('BTC', btc_fills, btc_bt_trades, 0.70, '#F44336'),
-        ('ETH', eth_fills, eth_bt_trades, 0.55, '#FF9800'),
+        ('BTC', btc_fills, btc_bt_trades, BTC_CAP, '#F44336'),
+        ('ETH', eth_fills, eth_bt_trades, ETH_CAP, '#FF9800'),
     ]):
         bt_fills = [t['avg_fill'] for t in bt_t if t['avg_fill'] > 0]
 
@@ -427,8 +526,10 @@ def plot_stats_comparison(s_bl, s_bb, s_el, s_eb, out_path):
     ax_fill = fig.add_subplot(gs[2,0])
     bar2(ax_fill, [s['avg_fill'] for s in lives], [s['avg_fill'] for s in bts],
          'Prix fill moyen', 'price', '{:.3f}', ylim=(0,1.05))
-    ax_fill.axhline(0.70, color='#FFC107', linestyle=':', linewidth=1.5, label='cap BTC=0.70')
-    ax_fill.axhline(0.55, color='#9C27B0', linestyle=':', linewidth=1.5, label='cap ETH=0.55')
+    ax_fill.axhline(BTC_CAP, color='#FFC107', linestyle=':', linewidth=1.5,
+                    label=f'cap BTC={BTC_CAP:.2f}')
+    ax_fill.axhline(ETH_CAP, color='#9C27B0', linestyle=':', linewidth=1.5,
+                    label=f'cap ETH={ETH_CAP:.2f}')
     ax_fill.legend(fontsize=7)
 
     bar2(fig.add_subplot(gs[2,1]), [s['maxdd'] for s in lives], [s['maxdd'] for s in bts],
@@ -443,7 +544,7 @@ def plot_stats_comparison(s_bl, s_bb, s_el, s_eb, out_path):
 
 
 # ── Graphique trigger match ───────────────────────────────────────────────────
-def plot_trigger_match(btc_windows, out_path, csv_path):
+def plot_trigger_match(btc_windows, out_path, csv_path, cfg_btc):
     """Montre accord vol gate BT vs live sur les contrats M5 BTC."""
     cts = load_contracts([csv_path], '5min', 'm5_up_bid','m5_down_bid','m5_up_ask','m5_down_ask')
     precompute_vol(cts, VOL_LBS)
@@ -451,7 +552,9 @@ def plot_trigger_match(btc_windows, out_path, csv_path):
     t1 = btc_windows[-1]['ts'].timestamp()
     cts = [c for c in cts if t0-300 <= c['open_ts'] <= t1+300]
 
-    bt_map = {int(c['open_ts']): c.get('vol_0.5h_net', 0) for c in cts}
+    vk = f"vol_{cfg_btc['vol_lb_h']:g}h_{cfg_btc.get('vol_type', 'net')}"
+    thresh = float(cfg_btc.get('vol_thresh', 60.0))
+    bt_map = {int(c['open_ts']): c.get(vk, 0) for c in cts}
     live_map = {int(w['ts'].timestamp()): w for w in btc_windows if w['tf']=='m5'}
 
     matched = sorted(set(bt_map) & set(live_map))
@@ -461,7 +564,7 @@ def plot_trigger_match(btc_windows, out_path, csv_path):
     bt_vols   = [bt_map[ts] for ts in matched]
     live_vols = [live_map[ts]['vol'] for ts in matched]
     live_pass = [not live_map[ts]['skip'] for ts in matched]
-    bt_pass   = [bt_map[ts] >= 60 for ts in matched]
+    bt_pass   = [bt_map[ts] >= thresh for ts in matched]
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     fig.suptitle('Accord trigger vol gate BT vs Live (M5 BTC)', fontsize=12)
@@ -480,9 +583,10 @@ def plot_trigger_match(btc_windows, out_path, csv_path):
                [live_vols[i] for i,v in enumerate(only_live) if v], s=20, color='purple', zorder=5, label='Live seul')
     m = max(max(bt_vols), max(live_vols))
     ax.plot([0,m],[0,m], 'k--', linewidth=0.8, alpha=0.5)
-    ax.axvline(60, color='#2196F3', linestyle=':', linewidth=1)
-    ax.axhline(60, color='#F44336', linestyle=':', linewidth=1)
-    ax.set_xlabel('Vol 0.5h net BT ($)'); ax.set_ylabel('Vol 0.5h net Live ($)')
+    ax.axvline(thresh, color='#2196F3', linestyle=':', linewidth=1)
+    ax.axhline(thresh, color='#F44336', linestyle=':', linewidth=1)
+    lb = cfg_btc["vol_lb_h"]
+    ax.set_xlabel(f'Vol {lb:g}h net BT ($)'); ax.set_ylabel(f'Vol {lb:g}h net Live ($)')
     ax.set_title(f'BT vs Live vol\n{sum(both_pass)} accord, {sum(only_bt)} BT-seul, {sum(only_live)} live-seul')
     ax.legend(fontsize=8); ax.grid(alpha=0.3)
 
@@ -622,8 +726,11 @@ def matched_comparison(live_trades, bt_trades, asset, out_txt):
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     print("=== Parse live ===", flush=True)
-    btc_live, btc_fills, btc_windows = parse_live(LIVE_DIR / "btc")
-    eth_live, eth_fills, eth_windows = parse_live(LIVE_DIR / "eth")
+    btc_settlement = _load_live_settlement("btc")
+    btc_windows, btc_live, btc_fills = parse_live_btc_settlement(
+        LIVE_DIR_BTC / "btc", btc_settlement
+    )
+    eth_live, eth_fills, eth_windows = parse_live(LIVE_DIR_ETH / "eth")
     btc_days = (btc_live[-1]['ts'].timestamp() - btc_live[0]['ts'].timestamp()) / 86400 if btc_live else 1
     eth_days = (eth_live[-1]['ts'].timestamp() - eth_live[0]['ts'].timestamp()) / 86400 if eth_live else 1
     print(f"  BTC: {len(btc_live)} trades sur {btc_days:.1f}j", flush=True)
@@ -663,11 +770,11 @@ if __name__ == "__main__":
         pr("=== DIAGNOSTIC FILL PRICE ===")
         af_btc = s_bl['avg_fill'] or 0.96
         af_eth = s_el['avg_fill'] or 0.96
-        pr(f"  BTC : fill live moy={af_btc:.3f}  vs cap BT=0.70")
-        pr(f"  ETH : fill live moy={af_eth:.3f}  vs cap ETH=0.55")
-        pr(f"  BTC au cap 0.70 : win/ordre = $100*(0.99/0.70-1) = ${100*(0.99/0.70-1):.1f}")
+        pr(f"  BTC : fill live moy={af_btc:.3f}  vs cap BT={BTC_CAP:.2f}")
+        pr(f"  ETH : fill live moy={af_eth:.3f}  vs cap ETH={ETH_CAP:.2f}")
+        pr(f"  BTC au cap {BTC_CAP:.2f} : win/ordre = $100*(0.99/{BTC_CAP:.2f}-1) = ${100*(0.99/BTC_CAP-1):.2f}")
         pr(f"  BTC au fill {af_btc:.2f} : win/ordre = $100*(0.99/{af_btc:.2f}-1) = ${100*(0.99/af_btc-1):.2f}")
-        pr(f"  ETH au cap 0.55 : win/ordre = $150*(0.99/0.55-1) = ${150*(0.99/0.55-1):.1f}")
+        pr(f"  ETH au cap {ETH_CAP:.2f} : win/ordre = $150*(0.99/{ETH_CAP:.2f}-1) = ${150*(0.99/ETH_CAP-1):.1f}")
         pr(f"  ETH au fill {af_eth:.2f} : win/ordre = $150*(0.99/{af_eth:.2f}-1) = ${150*(0.99/af_eth-1):.2f}")
         pr(f"  -> Voir pnl_by_fill_bucket.png")
 
@@ -676,8 +783,13 @@ if __name__ == "__main__":
         matched_comparison(eth_live, eth_bt, 'ETH', f)
 
     print("\n=== Graphiques ===", flush=True)
-    plot_equity_comparison(btc_live, bt_btc_cum, bt_hi, bt_nh, bt_days,
-                           f'BTC — Live vs BT  (size $100x2)', OUT_DIR/"equity_btc.png", '#2196F3')
+    plot_equity_btc_recap_style(
+        btc_live,
+        btc_bt,
+        CUTOFF_TS,
+        "BTC — Live vs BT  ($100x2, cutoff+settlement alignés recap)",
+        OUT_DIR / "equity_btc.png",
+    )
     plot_equity_comparison(eth_live, bt_eth_cum, bt_hi, bt_nh, bt_days,
                            f'ETH — Live vs BT  (size $150x2)', OUT_DIR/"equity_eth.png", '#4CAF50')
     plot_combined(btc_live, eth_live, bt_btc_cum, bt_eth_cum, bt_hi, bt_nh, bt_days,
@@ -686,7 +798,7 @@ if __name__ == "__main__":
     plot_pnl_per_trade(btc_live, btc_bt, eth_live, eth_bt, OUT_DIR/"pnl_per_trade.png")
     plot_stats_comparison(s_bl, s_bb, s_el, s_eb, OUT_DIR/"stats_comparison.png")
     plot_trigger_match(btc_windows, OUT_DIR/"trigger_match.png",
-                       str(CSV_DIR/"BTC.csv"))
+                       str(CSV_DIR/"BTC.csv"), CFG_BTC)
     plot_pnl_by_fill_bucket(btc_live, btc_bt, eth_live, eth_bt,
                             OUT_DIR/"pnl_by_fill_bucket.png")
     print(f"\n  -> {OUT_DIR}", flush=True)

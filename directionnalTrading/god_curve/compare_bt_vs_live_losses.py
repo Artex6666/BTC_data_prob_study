@@ -123,7 +123,7 @@ def parse_jsonl(path):
     with open(path, encoding="utf-8") as f:
         events = [json.loads(line) for line in f if line.strip()]
     wo = next((e for e in events if e.get("event") == "window_open"), None)
-    we = next((e for e in events if e.get("event") == "window_ended"), None)
+    we = next((e for e in events if e.get("event") in ("window_ended", "window_settled")), None)
     if not wo or not we:
         return None
     ts = pd.Timestamp(wo["ts"].replace("Z", "+00:00")).tz_convert(None)

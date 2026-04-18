@@ -93,7 +93,15 @@ def attach_settlement_outcomes(contracts: list, asset: str, tf: str = '5min',
 
 
 # ── Chargement ───────────────────────────────────────────────────────────────
-def load_contracts(csv_paths, tf_floor, bid_up_col, bid_down_col, ask_up_col, ask_down_col):
+def load_contracts(
+    csv_paths,
+    tf_floor,
+    bid_up_col,
+    bid_down_col,
+    ask_up_col,
+    ask_down_col,
+    window_s=60,
+):
     dfs = []
     for p in csv_paths:
         d = pd.read_csv(
@@ -108,20 +116,24 @@ def load_contracts(csv_paths, tf_floor, bid_up_col, bid_down_col, ask_up_col, as
     contracts = []
     for ce, grp in df.groupby('contract'):
         op_spot = grp['spot_price'].iloc[0]
-        t60 = grp[grp['timestamp'] >= ce - pd.Timedelta(seconds=60)]
-        if len(t60) < 2: continue
+        if window_s is None:
+            ticks = grp
+        else:
+            ticks = grp[grp['timestamp'] >= ce - pd.Timedelta(seconds=int(window_s))]
+        if len(ticks) < 2:
+            continue
         open_time = ce - offset
         contracts.append({
             'ce':       ce,
             'ce_ts':    ce.timestamp(),
             'open_ts':  open_time.timestamp(),
             'op':       float(op_spot),
-            'spot':     t60['spot_price'].values.astype(np.float64),
-            'ts':       t60['timestamp'].values,
-            'up_bid':   t60[bid_up_col].values.astype(np.float64),
-            'down_bid': t60[bid_down_col].values.astype(np.float64),
-            'up_ask':   t60[ask_up_col].values.astype(np.float64),
-            'down_ask': t60[ask_down_col].values.astype(np.float64),
+            'spot':     ticks['spot_price'].values.astype(np.float64),
+            'ts':       ticks['timestamp'].values,
+            'up_bid':   ticks[bid_up_col].values.astype(np.float64),
+            'down_bid': ticks[bid_down_col].values.astype(np.float64),
+            'up_ask':   ticks[ask_up_col].values.astype(np.float64),
+            'down_ask': ticks[ask_down_col].values.astype(np.float64),
         })
     del df
     return contracts
@@ -263,6 +275,16 @@ def build_hour_index(all_contracts_by_tf):
 
 
 # ── Simulation ────────────────────────────────────────────────────────────────
+def compute_trigger_threshold(cfg, remain, g=1.0):
+    if cfg['curve'] == 'linear':
+        linear_part = float(cfg["slope"]) * float(g) * float(remain)
+        intercept = float(cfg.get("intercept", 0.0) or 0.0)
+        if cfg.get("intercept_mode") == "floor":
+            return max(linear_part, intercept)
+        return linear_part + intercept
+    return cfg["A_exp"] * (np.exp(remain / cfg["tau"]) - 1.0) * g
+
+
 def simulate(c, cfg):
     curve = cfg['curve']; cap = cfg['eq_cap']
     ce_ns = np.datetime64(c['ce'])
@@ -349,10 +371,7 @@ def simulate(c, cfg):
         else:
             g = 1.0
 
-        if curve == 'linear':
-            thresh = (cfg["slope"] * g) * remain + cfg["intercept"]
-        else:
-            thresh = cfg["A_exp"] * (np.exp(remain / cfg["tau"]) - 1.0) * g
+        thresh = compute_trigger_threshold(cfg, remain, g)
 
         if activated_side:
             buf = (s - op) if activated_side == 'UP' else (op - s)
@@ -360,9 +379,10 @@ def simulate(c, cfg):
                 if active_order is not None: pending_cancel = True
                 pending_place = pending_size = pending_ord_side = None; activated_side = None; continue
 
+        min_delta = cfg.get('min_delta_usd', 0.0)
         if not activated_side:
-            if   fc_up   < max_orders and s - op >= thresh: activated_side = 'UP'
-            elif fc_down < max_orders and op - s >= thresh: activated_side = 'DOWN'
+            if   fc_up   < max_orders and s - op >= thresh and s - op >= min_delta: activated_side = 'UP'
+            elif fc_down < max_orders and op - s >= thresh and op - s >= min_delta: activated_side = 'DOWN'
         if not activated_side: continue
 
         # Si ce côté est déjà maxé, on ignore
@@ -458,7 +478,7 @@ def simulate_trade_log(c, cfg):
     for j in range(len(spots)):
         s = spots[j]
         remain = (ce_ns - ts_arr[j]) / np.timedelta64(1, 's')
-        if remain <= 0 or fill_count >= max_orders: break
+        if remain <= 0 or (fc_up >= max_orders and fc_down >= max_orders): break
         ub = round(up_bid[j], 2); db = round(down_bid[j], 2)
 
         if _vrs_lookup is not None:
@@ -510,10 +530,7 @@ def simulate_trade_log(c, cfg):
         else:
             g = 1.0
 
-        if curve == 'linear':
-            thresh = (cfg["slope"] * g) * remain + cfg["intercept"]
-        else:
-            thresh = cfg["A_exp"] * (np.exp(remain / cfg["tau"]) - 1.0) * g
+        thresh = compute_trigger_threshold(cfg, remain, g)
 
         if activated_side:
             buf = (s - op) if activated_side == 'UP' else (op - s)
@@ -521,9 +538,10 @@ def simulate_trade_log(c, cfg):
                 if active_order is not None: pending_cancel = True
                 pending_place = pending_size = pending_ord_side = None; activated_side = None; continue
 
+        min_delta = cfg.get('min_delta_usd', 0.0)
         if not activated_side:
-            if   fc_up   < max_orders and s - op >= thresh: activated_side = 'UP'
-            elif fc_down < max_orders and op - s >= thresh: activated_side = 'DOWN'
+            if   fc_up   < max_orders and s - op >= thresh and s - op >= min_delta: activated_side = 'UP'
+            elif fc_down < max_orders and op - s >= thresh and op - s >= min_delta: activated_side = 'DOWN'
         if not activated_side: continue
 
         if (activated_side == 'UP' and fc_up >= max_orders) or \
@@ -578,6 +596,106 @@ def simulate_trade_log(c, cfg):
         f['contract_pnl'] = pnl
 
     return won, pnl, fills
+
+
+def simulate_market_trade_with_exit(
+    c,
+    side,
+    entry_j,
+    size_usd,
+    take_profit_c=None,
+    stop_loss_c=None,
+    max_hold_s=None,
+):
+    """
+    Achat market au meilleur ask du côté `side` à l'index `entry_j`.
+    Sortie optionnelle avant settlement au meilleur bid du même côté.
+
+    take_profit_c / stop_loss_c sont exprimés en cents de prix de contrat.
+    max_hold_s : durée max après l'entrée ; si atteinte, sortie au bid courant.
+    """
+    side = side.upper()
+    if side not in ("UP", "DOWN"):
+        raise ValueError(f"Unsupported side: {side}")
+
+    asks = c['up_ask'] if side == 'UP' else c['down_ask']
+    bids = c['up_bid'] if side == 'UP' else c['down_bid']
+    ts_arr = c['ts']
+    if entry_j < 0 or entry_j >= len(ts_arr):
+        return None
+
+    entry_price = float(asks[entry_j])
+    if not np.isfinite(entry_price) or entry_price <= 0:
+        return None
+
+    size_usd = float(size_usd)
+    if size_usd <= 0:
+        return None
+
+    shares = size_usd / entry_price
+    entry_ts = ts_arr[entry_j]
+    tp_d = None if take_profit_c is None else float(take_profit_c) / 100.0
+    sl_d = None if stop_loss_c is None else float(stop_loss_c) / 100.0
+    max_hold_s = None if max_hold_s in (None, 0) else float(max_hold_s)
+
+    exit_j = None
+    exit_price = None
+    exit_reason = "settlement"
+
+    for j in range(entry_j + 1, len(ts_arr)):
+        bid = float(bids[j])
+        if not np.isfinite(bid) or bid <= 0:
+            continue
+        elapsed_s = float((ts_arr[j] - entry_ts) / np.timedelta64(1, 's'))
+
+        if tp_d is not None and bid >= entry_price + tp_d:
+            exit_j = j
+            exit_price = bid
+            exit_reason = "take_profit"
+            break
+        if sl_d is not None and bid <= max(0.01, entry_price - sl_d):
+            exit_j = j
+            exit_price = bid
+            exit_reason = "stop_loss"
+            break
+        if max_hold_s is not None and elapsed_s >= max_hold_s:
+            exit_j = j
+            exit_price = bid
+            exit_reason = "time_exit"
+            break
+
+    if '_settlement_won_up' in c:
+        won_up = c['_settlement_won_up']
+    elif 'up_ask' in c and len(c['up_ask']):
+        won_up = float(c['up_ask'][-1]) > float(c['down_ask'][-1])
+    else:
+        won_up = c['up_bid'][-1] > c['down_bid'][-1]
+
+    if exit_j is not None and exit_price is not None:
+        proceeds = shares * exit_price
+        pnl = proceeds - size_usd
+        exit_ts = ts_arr[exit_j]
+    else:
+        payout = shares if ((side == 'UP') == won_up) else 0.0
+        pnl = payout - size_usd
+        exit_ts = ts_arr[-1]
+
+    return {
+        'side': side,
+        'entry_j': int(entry_j),
+        'entry_ts': entry_ts,
+        'entry_price': entry_price,
+        'size_usd': size_usd,
+        'shares': shares,
+        'exit_j': None if exit_j is None else int(exit_j),
+        'exit_ts': exit_ts,
+        'exit_price': exit_price,
+        'exit_reason': exit_reason,
+        'won_up': bool(won_up),
+        'won_side': bool(((side == 'UP') == won_up)),
+        'pnl': float(pnl),
+        'return_pct': float(pnl / size_usd * 100.0),
+    }
 
 
 # ── Run un config sur un timeframe ───────────────────────────────────────────
@@ -903,7 +1021,10 @@ def make_config_name(r):
     if r['curve'] == 'expo':
         s = f"expo_A{r['A_exp']:.0f}t{r['tau']:.0f}"
     else:
-        s = f"lin_sl{_gfmt(r['slope'])}_int{_gfmt(r['intercept'])}"
+        if r.get("intercept_mode") == "floor":
+            s = f"lin_sl{_gfmt(r['slope'])}_flo{_gfmt(r['intercept'])}"
+        else:
+            s = f"lin_sl{_gfmt(r['slope'])}_int{_gfmt(r['intercept'])}"
     s += f"_c{int(r['eq_cap']*100)}"
     if r.get('vol_thresh') is not None:
         vt  = r.get('vol_type', 'range')
@@ -929,7 +1050,10 @@ def make_config_label(r):
     if r['curve'] == 'expo':
         curve_s = f"expo A={r['A_exp']:.0f} t={r['tau']:.0f}"
     else:
-        curve_s = f"sl={r['slope']:.5g} int={r['intercept']:.4g}"
+        if r.get("intercept_mode") == "floor":
+            curve_s = f"sl={r['slope']:.5g} floor={r['intercept']:.4g}"
+        else:
+            curve_s = f"sl={r['slope']:.5g} int={r['intercept']:.4g}"
     cap_s = f"cap={r['eq_cap']:.2f}"
     vol_s = ""
     if r.get('vol_thresh') is not None:

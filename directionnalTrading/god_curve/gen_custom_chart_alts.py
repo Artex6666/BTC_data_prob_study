@@ -10,7 +10,10 @@ Chaque chart par stratégie contient :
   - Hourly bars + drawdown
 
 Overlay : toutes les configs sur un seul graphe.
+
+CLI : --day YYYY-MM-DD → alts_custom_charts/day_YYYY-MM-DD/ (un jour UTC, ce).
 """
+import argparse
 import sys
 from pathlib import Path
 from collections import defaultdict
@@ -31,6 +34,7 @@ from chart_utils import (
     TIMEFRAMES, VOL_LBS, COLORS,
     make_xlabels, _rf_str_hourly_equity, _esc,
 )
+from gen_custom_chart_common import utc_day_bounds, filter_contracts_by_utc_day
 
 # ── Sources CSV ───────────────────────────────────────────────────────────────
 ASSETS = ['xrp', 'sol', 'bnb']
@@ -254,9 +258,10 @@ def custom_overlay(series_list, n_hours, hour_index, out_path, title):
 
 
 # ── Moteur principal ──────────────────────────────────────────────────────────
-def run_chart(out_dir, title_prefix):
+def run_chart(out_dir, title_prefix, day=None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    day_bounds = utc_day_bounds(day) if day else None
 
     # Chargement par asset par TF
     contracts_by_asset_tf = {}
@@ -275,6 +280,8 @@ def run_chart(out_dir, title_prefix):
         for tf_floor, bid_up, bid_down, ask_up, ask_down in TIMEFRAMES:
             try:
                 cts = load_contracts(csv_paths, tf_floor, bid_up, bid_down, ask_up, ask_down)
+                if day_bounds:
+                    cts = filter_contracts_by_utc_day(cts, day_bounds[0], day_bounds[1])
                 if tf_floor == '5min':
                     precompute_vol(cts, VOL_LBS)
                     m5_ref = cts
@@ -293,8 +300,13 @@ def run_chart(out_dir, title_prefix):
 
     # hour_index global (union de tous les assets)
     hour_index, n_hours = build_hour_index([all_cts_flat])
+    if n_hours == 0:
+        print("\n  Aucun contrat sur cette période — rien à tracer.", flush=True)
+        return
     days = n_hours / 24
-    print(f"\n  {n_hours} heures (gaps exclus)  {days:.1f}j\n", flush=True)
+    print(f"\n  {n_hours} heures (gaps exclus)  {days:.1f}j"
+          + (f"  (jour UTC {day})" if day else "") + "\n",
+          flush=True)
 
     series_list = []
 
@@ -362,6 +374,21 @@ def run_chart(out_dir, title_prefix):
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Custom charts XRP+SOL+BNB")
+    parser.add_argument(
+        "--day",
+        type=str,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Un jour UTC (ce). Sortie alts_custom_charts/day_*/.",
+    )
+    args = parser.parse_args()
+
     print("=== Gen Custom Chart Alts (XRP + SOL + BNB) ===\n", flush=True)
-    run_chart(OUT_DIR / "all", "Custom Alts — Full")
+    if args.day:
+        d = args.day.strip()
+        run_chart(OUT_DIR / f"day_{d}", f"Custom Alts — {d}", day=d)
+        print(f"\nOverlay -> {OUT_DIR / f'day_{d}' / 'overlay_all.png'}")
+    else:
+        run_chart(OUT_DIR / "all", "Custom Alts — Full")
     print("\nDone.")

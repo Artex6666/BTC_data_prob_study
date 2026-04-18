@@ -1,0 +1,19 @@
+Asset: eth
+Markets covered: 692
+Bot pnl/spent/roi: 4652.47 / 313745.96 / 1.48%
+Candidate pnl/spent/roi: 10.55 / 1855.22 / 0.57%
+Candidate trades: 274
+Candidate trade WR: 55.47%
+
+Derived rules:
+eth|h1|Down: {'require_aligned': True, 'require_recross': True, 'abs_open_pct_min': 0.1321817012624649, 'abs_move_30s_pct_min': 0.037327863917448335, 'ask_c_max': 75.0, 'elapsed_frac_min': 0.3711082777777777, 'elapsed_frac_max': 0.9310264166666666, 'score': 0.012079480222089411, 'precision': 0.08888888888888889, 'recall': 0.018467220683287166, 'predicted_rows': 225, 'buy_rows': 1083, 'entry_size_usd': 12.49}
+eth|h1|Up: {'require_aligned': True, 'require_recross': True, 'abs_open_pct_min': 0.08432542276996524, 'abs_move_30s_pct_min': 0.03997616816122855, 'ask_c_max': 69.0, 'elapsed_frac_min': 0.2828314444444444, 'elapsed_frac_max': 0.9309598472222222, 'score': 0.020815514244207974, 'precision': 0.2375, 'recall': 0.015676567656765675, 'predicted_rows': 80, 'buy_rows': 1212, 'entry_size_usd': 9.19}
+eth|m15|Down: {'require_aligned': True, 'require_recross': True, 'abs_open_pct_min': 0.0632455262032593, 'abs_move_30s_pct_min': 0.01735866361822155, 'ask_c_max': 74.0, 'elapsed_frac_min': 0.2273955555555555, 'elapsed_frac_max': 0.8985594444444445, 'score': 0.005016990253635856, 'precision': 0.04935622317596566, 'recall': 0.010332434860736747, 'predicted_rows': 466, 'buy_rows': 2226, 'entry_size_usd': 6.225}
+eth|m15|Up: {'require_aligned': True, 'require_recross': True, 'abs_open_pct_min': 0.0542941274297907, 'abs_move_30s_pct_min': 0.03202071743367182, 'ask_c_max': 71.0, 'elapsed_frac_min': 0.32328755555555555, 'elapsed_frac_max': 0.8963058888888888, 'score': 0.005142377326247792, 'precision': 0.10377358490566038, 'recall': 0.005011389521640091, 'predicted_rows': 106, 'buy_rows': 2195, 'entry_size_usd': 7.82}
+eth|m5|Down: {'require_aligned': True, 'require_recross': False, 'abs_open_pct_min': 0.02702211837049045, 'abs_move_30s_pct_min': 0.01497544760740605, 'ask_c_max': 69.0, 'elapsed_frac_min': 0.20905400000000002, 'elapsed_frac_max': 0.9432596666666666, 'score': 0.024525792282628422, 'precision': 0.1947565543071161, 'recall': 0.015858493443122904, 'predicted_rows': 534, 'buy_rows': 6558, 'entry_size_usd': 6.28}
+eth|m5|Up: {'require_aligned': True, 'require_recross': False, 'abs_open_pct_min': 0.0264180112129763, 'abs_move_30s_pct_min': 0.015080534921165, 'ask_c_max': 65.0, 'elapsed_frac_min': 0.18988333333333332, 'elapsed_frac_max': 0.8628989999999999, 'score': 0.011430485236557656, 'precision': 0.17763157894736842, 'recall': 0.008450704225352112, 'predicted_rows': 304, 'buy_rows': 6390, 'entry_size_usd': 6.27}
+
+Derived exit policies:
+eth|h1: {'take_profit_c': None, 'stop_loss_c': None, 'max_hold_s': None, 'mean_pnl_per_100usd': 5.785930598614225}
+eth|m15: {'take_profit_c': None, 'stop_loss_c': 10, 'max_hold_s': None, 'mean_pnl_per_100usd': 2.3241251185308203}
+eth|m5: {'take_profit_c': 12, 'stop_loss_c': None, 'max_hold_s': 60, 'mean_pnl_per_100usd': 4.4137988452681}

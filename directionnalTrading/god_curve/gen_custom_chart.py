@@ -4,7 +4,8 @@ Génère deux overlay charts avec des configs manuelles (sans relancer l'optimiz
   - overlay_last4d.png: les 4 derniers jours uniquement
 
 Une seule courbe par config (pas de variantes max fill). Par défaut max_orders=2
-(nombre max de fills par contrat). Option CLI : --max-orders N.
+(nombre max de fills par contrat). Options CLI : --max-orders N ; -4d / --last-4d ; --day YYYY-MM-DD
+(backtest d'un seul jour UTC, sortie dans custom_chart/day_YYYY-MM-DD/).
 
 Sizing : scale = $500 / maxDD (sur ce run unique).
 """
@@ -34,6 +35,7 @@ from chart_utils import (
     chart_equity, chart_entry_and_loss_analytics, attach_settlement_outcomes,
     TIMEFRAMES, VOL_LBS, COLORS, make_xlabels, _rf_str_hourly_equity, _esc,
 )
+from gen_custom_chart_common import utc_day_bounds, filter_contracts_by_utc_day
 
 DEFAULT_MAX_ORDERS = 2
 
@@ -160,12 +162,13 @@ def custom_overlay(series_list, n_hours, hour_index, out_path, title):
 
 
 # ── Moteur principal ──────────────────────────────────────────────────────────
-def run_chart(csv_paths, out_dir, title_prefix, max_orders=None):
+def run_chart(csv_paths, out_dir, title_prefix, max_orders=None, day=None):
     if max_orders is None:
         max_orders = DEFAULT_MAX_ORDERS
     max_orders = max(1, int(max_orders))
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    day_bounds = utc_day_bounds(day) if day else None
 
     # Charger contrats — M5 sert de référence vol pour M15 et H1
     contracts_by_tf = []
@@ -173,6 +176,8 @@ def run_chart(csv_paths, out_dir, title_prefix, max_orders=None):
     for tf_floor, bid_up, bid_down, ask_up, ask_down in TIMEFRAMES:
         try:
             cts = load_contracts(csv_paths, tf_floor, bid_up, bid_down, ask_up, ask_down)
+            if day_bounds:
+                cts = filter_contracts_by_utc_day(cts, day_bounds[0], day_bounds[1])
             if tf_floor == '5min':
                 precompute_vol(cts, VOL_LBS)
                 m5_ref = cts
@@ -190,8 +195,13 @@ def run_chart(csv_paths, out_dir, title_prefix, max_orders=None):
             attach_cnet_data(cts, (2, 5, 10), ref_contracts=m5_ref)
 
     hour_index, n_hours = build_hour_index(contracts_by_tf)
+    if n_hours == 0:
+        print("  Aucun contrat sur cette période — rien à tracer.", flush=True)
+        return
     days = n_hours / 24
-    print(f"  {n_hours} heures tradées ({days:.1f}j)  max_orders={max_orders}", flush=True)
+    print(f"  {n_hours} heures tradées ({days:.1f}j)  max_orders={max_orders}"
+          + (f"  (jour UTC {day})" if day else ""),
+          flush=True)
 
     series_list = []
     ls, lw, alpha = OVERLAY_LINE_STYLE
@@ -252,14 +262,38 @@ if __name__ == "__main__":
         default=DEFAULT_MAX_ORDERS,
         help=f"Max fills par contrat (defaut: {DEFAULT_MAX_ORDERS}).",
     )
+    parser.add_argument(
+        "-4d",
+        "--last-4d",
+        action="store_true",
+        dest="last_4d_only",
+        help="Générer uniquement la chart last4d (CSV récent), pas la période full.",
+    )
+    parser.add_argument(
+        "--day",
+        type=str,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Backtest uniquement ce jour (UTC, filtre sur ce=clôture). "
+        "Sortie : custom_chart/day_YYYY-MM-DD/. Ignore all/last4d.",
+    )
     args = parser.parse_args()
     mo = max(1, int(args.max_orders))
 
-    print("\n=== Chart 1 : toute la période ===")
-    run_chart(CSV_FULL, OUT_DIR / "all", "Custom BTC - Full", max_orders=mo)
+    if args.day:
+        d = args.day.strip()
+        sub = OUT_DIR / f"day_{d}"
+        print(f"\n=== Jour UTC {d} (CSV full filtré) ===", flush=True)
+        run_chart(CSV_FULL, sub, f"Custom BTC - {d}", max_orders=mo, day=d)
+        print(f"\nOverlay -> {sub / 'overlay_all.png'}")
+    else:
+        if not args.last_4d_only:
+            print("\n=== Chart 1 : toute la période ===")
+            run_chart(CSV_FULL, OUT_DIR / "all", "Custom BTC - Full", max_orders=mo)
 
-    print("\n=== Chart 2 : 4 derniers jours ===")
-    run_chart(CSV_RECENT, OUT_DIR / "last4d", "Custom BTC - Last 4 days", max_orders=mo)
+        print("\n=== Chart 2 : 4 derniers jours ===")
+        run_chart(CSV_RECENT, OUT_DIR / "last4d", "Custom BTC - Last 4 days", max_orders=mo)
 
-    print(f"\nOverlay full   -> {OUT_DIR / 'all' / 'overlay_all.png'}")
-    print(f"Overlay last4d -> {OUT_DIR / 'last4d' / 'overlay_all.png'}")
+        if not args.last_4d_only:
+            print(f"\nOverlay full   -> {OUT_DIR / 'all' / 'overlay_all.png'}")
+        print(f"Overlay last4d -> {OUT_DIR / 'last4d' / 'overlay_all.png'}")

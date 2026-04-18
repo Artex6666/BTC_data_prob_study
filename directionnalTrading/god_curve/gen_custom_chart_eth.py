@@ -4,7 +4,9 @@ Génère deux overlay charts ETH avec configs manuelles :
   - overlay_last4d.png : période récente (reportLive ETH.csv)
 
 Une seule courbe par config (max_orders=2 fixe), scalée à maxDD=$500.
+CLI : -4d / --last-4d ; --day YYYY-MM-DD (un jour UTC, dossier day_*/).
 """
+import argparse
 import sys
 from pathlib import Path
 from collections import defaultdict
@@ -25,10 +27,12 @@ if hasattr(sys.stdout, "reconfigure"):
 
 from chart_utils import (
     load_contracts, precompute_vol, run_config_tf, attach_settlement_outcomes,
+    attach_cnet_data,
     build_cumulative, build_hour_index, make_config_label, make_config_name,
     chart_equity, chart_entry_and_loss_analytics,
     TIMEFRAMES, VOL_LBS, COLORS, make_xlabels, _rf_str_hourly_equity, _esc,
 )
+from gen_custom_chart_common import utc_day_bounds, filter_contracts_by_utc_day
 
 # ── Configs ETH ───────────────────────────────────────────────────────────────
 BASE_CONFIGS = [
@@ -73,6 +77,39 @@ BASE_CONFIGS = [
          A_exp=None, tau=None,
          eq_cap=0.55, max_losses_cb=None,
          vol_lb_h=2.0, vol_thresh=8.0, vol_type='net'),
+
+    # optimizer rank 3 — vrs_lin sl=0.300 int=0.1 cap=0.75 vrs1h b=8 g=0.75-1.50
+    dict(label='vrs_lin', curve='linear',
+         slope=0.3, intercept=0.1, intercept_mode='floor',
+         A_exp=None, tau=None,
+         eq_cap=0.75, max_losses_cb=None,
+         vol_lb_h=None, vol_thresh=None,
+         vrs_enabled=True, vrs_lb=1.0, vrs_base=8.0,
+         vrs_g_min=0.75, vrs_g_max=1.50),
+
+    # optimizer rank 11 — cnet_lin sl=0.200 int=1.0 cap=0.85 cnet2c>$1
+    dict(label='cnet_lin', curve='linear',
+         slope=0.2, intercept=1.0, intercept_mode='floor',
+         A_exp=None, tau=None,
+         eq_cap=0.85, max_losses_cb=None,
+         vol_lb_h=None, vol_thresh=None,
+         cnet_n=2, cnet_thresh=1.0),
+
+    # optimizer rank 9 — cnet_lin sl=0.250 int=0.1 cap=0.65 cnet2c>$0 (thresh=0.3 ?)
+    dict(label='cnet_lin', curve='linear',
+         slope=0.25, intercept=0.1, intercept_mode='floor',
+         A_exp=None, tau=None,
+         eq_cap=0.65, max_losses_cb=None,
+         vol_lb_h=None, vol_thresh=None,
+         cnet_n=2, cnet_thresh=0.3),
+
+    # optimizer rank 9 — cnet_lin sl=0.250 int=0.1 cap=0.65 cnet2c>$0 (thresh=0.5 ?)
+    dict(label='cnet_lin', curve='linear',
+         slope=0.25, intercept=0.1, intercept_mode='floor',
+         A_exp=None, tau=None,
+         eq_cap=0.65, max_losses_cb=None,
+         vol_lb_h=None, vol_thresh=None,
+         cnet_n=2, cnet_thresh=0.5),
 ]
 
 MAX_ORDERS    = 2
@@ -146,15 +183,18 @@ def custom_overlay(series_list, n_hours, hour_index, out_path, title):
 
 
 # ── Moteur principal ──────────────────────────────────────────────────────────
-def run_chart(csv_paths, out_dir, title_prefix):
+def run_chart(csv_paths, out_dir, title_prefix, day=None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    day_bounds = utc_day_bounds(day) if day else None
 
     contracts_by_tf = []
     m5_ref = None
     for tf_floor, bid_up, bid_down, ask_up, ask_down in TIMEFRAMES:
         try:
             cts = load_contracts(csv_paths, tf_floor, bid_up, bid_down, ask_up, ask_down)
+            if day_bounds:
+                cts = filter_contracts_by_utc_day(cts, day_bounds[0], day_bounds[1])
             if tf_floor == '5min':
                 precompute_vol(cts, VOL_LBS)
                 m5_ref = cts
@@ -169,10 +209,14 @@ def run_chart(csv_paths, out_dir, title_prefix):
     for (tf_floor, *_), cts in zip(TIMEFRAMES, contracts_by_tf):
         if cts:
             attach_settlement_outcomes(cts, 'eth', tf=tf_floor)
+            attach_cnet_data(cts, (2, 5, 10), ref_contracts=m5_ref)
 
     hour_index, n_hours = build_hour_index(contracts_by_tf)
+    if n_hours == 0:
+        print("  Aucun contrat sur cette période — rien à tracer.", flush=True)
+        return
     days = n_hours / 24
-    print(f"  {n_hours} heures tradées ({days:.1f}j)", flush=True)
+    print(f"  {n_hours} heures tradées ({days:.1f}j)" + (f"  (jour UTC {day})" if day else ""), flush=True)
 
     series_list = []
 
@@ -227,11 +271,37 @@ def run_chart(csv_paths, out_dir, title_prefix):
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    print("\n=== ETH Chart 1 : toute la période ===")
-    run_chart(CSV_FULL, OUT_DIR / "all", "Custom ETH - Full")
+    parser = argparse.ArgumentParser(description="Custom god_curve charts (ETH)")
+    parser.add_argument(
+        "-4d",
+        "--last-4d",
+        action="store_true",
+        dest="last_4d_only",
+        help="Générer uniquement la chart last4d (CSV récent), pas la période full.",
+    )
+    parser.add_argument(
+        "--day",
+        type=str,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Un jour UTC (clôture contrat). Sortie custom_chart_eth/day_*/.",
+    )
+    args = parser.parse_args()
 
-    print("\n=== ETH Chart 2 : période récente ===")
-    run_chart(CSV_RECENT, OUT_DIR / "last4d", "Custom ETH - Recent")
+    if args.day:
+        d = args.day.strip()
+        sub = OUT_DIR / f"day_{d}"
+        print(f"\n=== ETH jour UTC {d} ===", flush=True)
+        run_chart(CSV_FULL, sub, f"Custom ETH - {d}", day=d)
+        print(f"\nOverlay -> {sub / 'overlay_all.png'}")
+    else:
+        if not args.last_4d_only:
+            print("\n=== ETH Chart 1 : toute la période ===")
+            run_chart(CSV_FULL, OUT_DIR / "all", "Custom ETH - Full")
 
-    print(f"\nOverlay full   -> {OUT_DIR / 'all' / 'overlay_all.png'}")
-    print(f"Overlay recent -> {OUT_DIR / 'last4d' / 'overlay_all.png'}")
+        print("\n=== ETH Chart 2 : période récente ===")
+        run_chart(CSV_RECENT, OUT_DIR / "last4d", "Custom ETH - Recent")
+
+        if not args.last_4d_only:
+            print(f"\nOverlay full   -> {OUT_DIR / 'all' / 'overlay_all.png'}")
+        print(f"Overlay recent -> {OUT_DIR / 'last4d' / 'overlay_all.png'}")

@@ -1,6 +1,6 @@
 """
-gen_live_vs_bt_recap.py — Graphique recap Live vs BT (BTC + ETH)
-depuis 2026-04-04T13:10:00Z
+gen_live_vs_bt_recap.py — Graphique recap Live vs BT (BTC)
+depuis 2026-04-09T13:12:20Z  (slope7cap75)
 
 Stats par asset :
   - Contrats tradables (vol gate OK)
@@ -36,27 +36,19 @@ from chart_utils import (
 )
 
 BASE     = Path(__file__).resolve().parent.parent
-LIVE_DIR = BASE / "reportLive" / "safeChase" / "slope10int0VRS" / "btc"
+LIVE_DIR = BASE / "reportLive" / "safeChase" / "slope7cap75" / "btc"
 CSV_DIR  = BASE / "reportLive" / "safeChase"
 OUT_DIR  = Path(__file__).resolve().parent / "live_vs_bt"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Nouveau config BTC actif depuis le 5 avr ~21:45 UTC
-CUTOFF    = pd.Timestamp("2026-04-05T21:45:00", tz="UTC")
+# Config slope7cap75 actif depuis le 9 avr 13:12 UTC
+CUTOFF    = pd.Timestamp("2026-04-09T13:12:20", tz="UTC")
 CUTOFF_TS = CUTOFF.timestamp()
 
-CFG_BTC = dict(curve='linear', slope=10.0, intercept=0.0, eq_cap=0.55,
-               vol_lb_h=None, vol_thresh=None,
-               vrs_enabled=True, vrs_lb=1.0, vrs_base=150.0,
-               vrs_g_min=0.5, vrs_g_max=1.5,
+CFG_BTC = dict(curve='linear', slope=7.0, intercept=0.0, eq_cap=0.75,
+               vol_lb_h=1, vol_thresh=60.0, vol_type='net',
                max_losses_cb=None, max_orders=2)
 BTC_SIZE = 100.0
-
-CFG_ALT = dict(label='vol_net_lin', curve='linear',
-               slope=7.0, intercept=0.0,
-               eq_cap=0.75, max_losses_cb=None,
-               vol_lb_h=1, vol_thresh=60.0, vol_type='net',
-               max_orders=2)
 
 
 # ── Settlement live : charge une fois, keyed par (open_ts_int, tf_live) ──────
@@ -75,7 +67,7 @@ def _load_live_settlement(asset: str) -> dict:
 # ── Parse live JSONL ──────────────────────────────────────────────────────────
 def parse_live(asset_dir, settlement: dict):
     """
-    Retourne (windows, trades) depuis CUTOFF.
+    Retourne (windows, trades, fills_all) depuis CUTOFF.
 
     Résolution du PnL via settlement.csv (Gamma/Polymarket officiel).
     Fallback sur end_spot vs start_spot si contrat absent du CSV (trop récent).
@@ -85,6 +77,7 @@ def parse_live(asset_dir, settlement: dict):
     - DOWN gagne : pnl = down_shares - down_cost - up_cost
     """
     windows = []
+    fills_all = []
     for tf in ['m5', 'm15', 'h1']:
         tf_dir = asset_dir / tf
         if not tf_dir.exists():
@@ -112,6 +105,7 @@ def parse_live(asset_dir, settlement: dict):
 
                 elif ev == 'window_start' and cur:
                     tradable = True
+                    cur['vol'] = float(d.get('vol_gate_net_usd', 0))
 
                 elif ev in ('vol_gate_skip', 'eth_trend_gate_skip') and cur:
                     tradable = False
@@ -120,8 +114,9 @@ def parse_live(asset_dir, settlement: dict):
                     p = float(d.get('price', 0))
                     if p > 0:
                         fills_prices.append(p)
+                        fills_all.append(p)
 
-                elif ev == 'window_ended' and cur:
+                elif ev in ('window_ended', 'window_settled') and cur:
                     up_s  = float(d.get('up_shares',  0))
                     dn_s  = float(d.get('down_shares', 0))
                     up_c  = float(d.get('up_cost',    0))
@@ -159,6 +154,8 @@ def parse_live(asset_dir, settlement: dict):
                     windows.append(dict(
                         ts=cur['ts'], tf=tf,
                         tradable=tradable,
+                        skip=not tradable,
+                        vol=float(cur.get('vol', 0)),
                         traded=traded,
                         won=won,
                         pnl=pnl,
@@ -171,7 +168,7 @@ def parse_live(asset_dir, settlement: dict):
 
     windows.sort(key=lambda x: x['ts'])
     trades = [w for w in windows if w['traded']]
-    return windows, trades
+    return windows, trades, fills_all
 
 
 # ── Run BT ────────────────────────────────────────────────────────────────────
@@ -269,165 +266,150 @@ def compute_stats(windows, trades, label, days):
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
-print("=== Chargement settlement.csv ===", flush=True)
-btc_settlement = _load_live_settlement('btc')
-print(f"  {len(btc_settlement)} entrées (m5+m15+h1)", flush=True)
+if __name__ == "__main__":
+    print("=== Chargement settlement.csv ===", flush=True)
+    btc_settlement = _load_live_settlement('btc')
+    print(f"  {len(btc_settlement)} entrées (m5+m15+h1)", flush=True)
 
-print("=== Parse live BTC ===", flush=True)
-btc_windows, btc_live = parse_live(LIVE_DIR, btc_settlement)
-tradables = sum(1 for w in btc_windows if w['tradable'])
-price_fallback = sum(1 for t in btc_live if t.get('src') == 'price')
-print(f"  BTC live: {len(btc_live)} trades / {tradables} tradables", flush=True)
-print(f"  Résolution : settlement={len(btc_live)-price_fallback}  fallback_price={price_fallback}", flush=True)
+    print("=== Parse live BTC ===", flush=True)
+    btc_windows, btc_live, _btc_fills = parse_live(LIVE_DIR, btc_settlement)
+    tradables = sum(1 for w in btc_windows if w['tradable'])
+    price_fallback = sum(1 for t in btc_live if t.get('src') == 'price')
+    print(f"  BTC live: {len(btc_live)} trades / {tradables} tradables", flush=True)
+    print(f"  Résolution : settlement={len(btc_live)-price_fallback}  fallback_price={price_fallback}", flush=True)
 
-print("=== Run BT BTC (VRS) ===", flush=True)
-btc_bt, _ = run_bt("BTC", CFG_BTC, BTC_SIZE)
-print(f"  BT BTC VRS: {len(btc_bt)} trades depuis cutoff", flush=True)
+    print("=== Run BT BTC (slope7cap75, vol_net) ===", flush=True)
+    btc_bt, _ = run_bt("BTC", CFG_BTC, BTC_SIZE)
+    print(f"  BT BTC: {len(btc_bt)} trades depuis cutoff", flush=True)
 
-print("=== Run BT BTC (vol_net_lin) ===", flush=True)
-btc_bt_alt, _ = run_bt("BTC", CFG_ALT, BTC_SIZE)
-print(f"  BT BTC alt: {len(btc_bt_alt)} trades depuis cutoff", flush=True)
+    # Durée
+    now_ts  = pd.Timestamp.now(tz='UTC')
+    # BT limité à la même fenêtre temporelle (cutoff → dernier trade live)
+    if btc_live:
+        live_end_ts = max(t['ts'].timestamp() for t in btc_live)
+    else:
+        live_end_ts = now_ts.timestamp()
+    live_span_h = (live_end_ts - CUTOFF_TS) / 3600
+    live_span_d = live_span_h / 24
 
-# Durée
-now_ts  = pd.Timestamp.now(tz='UTC')
-btc_days = (now_ts - CUTOFF).total_seconds() / 86400
-# BT limité à la même fenêtre temporelle (cutoff → dernier trade live)
-if btc_live:
-    live_end_ts = max(t['ts'].timestamp() for t in btc_live)
-else:
-    live_end_ts = now_ts.timestamp()
-live_span_h = (live_end_ts - CUTOFF_TS) / 3600
-live_span_d = live_span_h / 24
+    s_bl = compute_stats(btc_windows, btc_live, 'BTC Live',          live_span_d)
+    s_bb = compute_stats([], btc_bt,            'BT slope7cap75',    live_span_d)
 
-s_bl  = compute_stats(btc_windows, btc_live,     'BTC Live',        live_span_d)
-s_bb  = compute_stats([], btc_bt,                'BT VRS',          live_span_d)
-s_alt = compute_stats([], btc_bt_alt,            'BT vol_net_lin',  live_span_d)
+    # Equity curves (abscisse = heures depuis CUTOFF)
+    ref_start = CUTOFF_TS
+    total_h   = live_span_h
 
-# Equity curves (abscisse = heures depuis CUTOFF)
-ref_start = CUTOFF_TS
-total_h   = live_span_h
+    lx_btc, ly_btc = trades_to_equity(btc_live)
+    bx_btc, by_btc = bt_to_equity_hours(btc_bt, ref_start, live_end_ts)
 
-lx_btc, ly_btc   = trades_to_equity(btc_live)
-bx_btc, by_btc   = bt_to_equity_hours(btc_bt,     ref_start, live_end_ts)
-ax_btc, ay_btc   = bt_to_equity_hours(btc_bt_alt, ref_start, live_end_ts)
+    # ── Graphique ─────────────────────────────────────────────────────────────────
+    fig = plt.figure(figsize=(18, 13))
+    gs  = gridspec.GridSpec(3, 1, figure=fig, hspace=0.50,
+                            height_ratios=[3, 1.5, 1.2])
 
-# ── Graphique ─────────────────────────────────────────────────────────────────
-fig = plt.figure(figsize=(18, 13))
-gs  = gridspec.GridSpec(3, 1, figure=fig, hspace=0.50,
-                        height_ratios=[3, 1.5, 1.2])
+    COLOR_LIVE = '#F44336'
+    COLOR_BT   = '#90CAF9'
 
-COLOR_LIVE = '#F44336'
-COLOR_BT   = '#90CAF9'
-COLOR_ALT  = '#66BB6A'
+    ax_eq = fig.add_subplot(gs[0])
+    if bx_btc:
+        ax_eq.plot(bx_btc, by_btc, color=COLOR_BT, linewidth=1.8, linestyle='--',
+                   label=f'BT slope7cap75  {by_btc[-1]:+.1f}$  WR={s_bb["wr"]:.1f}%  T={s_bb["n"]}', zorder=3)
+    if lx_btc:
+        ax_eq.plot(lx_btc, ly_btc, color=COLOR_LIVE, linewidth=2.2,
+                   label=f'Live  {ly_btc[-1]:+.1f}$  WR={s_bl["wr"]:.1f}%  T={s_bl["n"]}', zorder=4)
+        ax_eq.scatter(lx_btc, ly_btc, color=COLOR_LIVE, s=20, zorder=5, alpha=0.7)
+    ax_eq.axhline(0, color='gray', linewidth=0.6, linestyle='--')
+    ax_eq.set_title('BTC — Live vs BT  ($100x2, slope7 cap0.75 vol_net_1h≥60)',
+                    fontsize=10, fontweight='bold')
+    ax_eq.set_xlabel(f'Heures depuis {CUTOFF.strftime("%Y-%m-%d %H:%M")} UTC', fontsize=9)
+    ax_eq.set_ylabel('PnL cumulé ($)', fontsize=9)
+    ax_eq.legend(fontsize=9); ax_eq.grid(alpha=0.25)
+    xticks = np.arange(0, total_h + 2, 2)
+    ax_eq.set_xticks(xticks)
+    ax_eq.set_xticklabels([f'{int(x)}h' for x in xticks], fontsize=7, rotation=45)
+    ax_eq.set_xlim(-0.2, total_h + 0.5)
 
-ax_eq = fig.add_subplot(gs[0])
-if ax_btc:
-    ax_eq.plot(ax_btc, ay_btc, color=COLOR_ALT, linewidth=1.8, linestyle=':',
-               label=f'BT vol_net_lin  {ay_btc[-1]:+.1f}$  WR={s_alt["wr"]:.1f}%  T={s_alt["n"]}', zorder=2)
-if bx_btc:
-    ax_eq.plot(bx_btc, by_btc, color=COLOR_BT, linewidth=1.8, linestyle='--',
-               label=f'BT VRS  {by_btc[-1]:+.1f}$  WR={s_bb["wr"]:.1f}%  T={s_bb["n"]}', zorder=3)
-if lx_btc:
-    ax_eq.plot(lx_btc, ly_btc, color=COLOR_LIVE, linewidth=2.2,
-               label=f'Live VRS  {ly_btc[-1]:+.1f}$  WR={s_bl["wr"]:.1f}%  T={s_bl["n"]}', zorder=4)
-    ax_eq.scatter(lx_btc, ly_btc, color=COLOR_LIVE, s=20, zorder=5, alpha=0.7)
-ax_eq.axhline(0, color='gray', linewidth=0.6, linestyle='--')
-ax_eq.set_title('BTC — Live vs BT  ($100x2, vrs_lin sl=10 cap=0.55 vrs1h b=150 g=0.5-1.5  |  alt: vol_net_lin sl=7 cap=0.75 vol1h≥60)',
-                fontsize=10, fontweight='bold')
-ax_eq.set_xlabel(f'Heures depuis {CUTOFF.strftime("%Y-%m-%d %H:%M")} UTC', fontsize=9)
-ax_eq.set_ylabel('PnL cumulé ($)', fontsize=9)
-ax_eq.legend(fontsize=9); ax_eq.grid(alpha=0.25)
-xticks = np.arange(0, total_h + 2, 2)
-ax_eq.set_xticks(xticks)
-ax_eq.set_xticklabels([f'{int(x)}h' for x in xticks], fontsize=7, rotation=45)
-ax_eq.set_xlim(-0.2, total_h + 0.5)
+    # ── Drawdown ──────────────────────────────────────────────────────────────────
+    ax_dd = fig.add_subplot(gs[1])
+    if ly_btc:
+        cum_l = np.array(ly_btc)
+        dd_l  = np.maximum.accumulate(cum_l) - cum_l
+        ax_dd.fill_between(lx_btc, 0, -dd_l, color=COLOR_LIVE, alpha=0.4, label='DD Live')
+    if by_btc:
+        cum_b = np.array(by_btc)
+        dd_b  = np.maximum.accumulate(cum_b) - cum_b
+        ax_dd.fill_between(bx_btc, 0, -dd_b, color=COLOR_BT, alpha=0.4, label='DD BT')
+    ax_dd.axhline(0, color='gray', linewidth=0.5)
+    ax_dd.set_ylabel('Drawdown ($)'); ax_dd.legend(fontsize=8); ax_dd.grid(alpha=0.25)
+    xticks2 = np.arange(0, total_h + 2, 2)
+    ax_dd.set_xticks(xticks2)
+    ax_dd.set_xticklabels([f'{int(x)}h' for x in xticks2], fontsize=7, rotation=45)
+    ax_dd.set_xlim(-0.2, total_h + 0.5)
 
-# ── Drawdown ──────────────────────────────────────────────────────────────────
-ax_dd = fig.add_subplot(gs[1])
-if ly_btc:
-    cum_l = np.array(ly_btc)
-    dd_l  = np.maximum.accumulate(cum_l) - cum_l
-    ax_dd.fill_between(lx_btc, 0, -dd_l, color=COLOR_LIVE, alpha=0.4, label='DD Live')
-if by_btc:
-    cum_b = np.array(by_btc)
-    dd_b  = np.maximum.accumulate(cum_b) - cum_b
-    ax_dd.fill_between(bx_btc, 0, -dd_b, color=COLOR_BT, alpha=0.4, label='DD BT VRS')
-if ay_btc:
-    cum_a = np.array(ay_btc)
-    dd_a  = np.maximum.accumulate(cum_a) - cum_a
-    ax_dd.fill_between(ax_btc, 0, -dd_a, color=COLOR_ALT, alpha=0.35, label='DD BT alt')
-ax_dd.axhline(0, color='gray', linewidth=0.5)
-ax_dd.set_ylabel('Drawdown ($)'); ax_dd.legend(fontsize=8); ax_dd.grid(alpha=0.25)
-xticks2 = np.arange(0, total_h + 2, 2)
-ax_dd.set_xticks(xticks2)
-ax_dd.set_xticklabels([f'{int(x)}h' for x in xticks2], fontsize=7, rotation=45)
-ax_dd.set_xlim(-0.2, total_h + 0.5)
+    # ── Tableau stats ─────────────────────────────────────────────────────────────
+    ax_tbl = fig.add_subplot(gs[2])
+    ax_tbl.axis('off')
 
-# ── Tableau stats ─────────────────────────────────────────────────────────────
-ax_tbl = fig.add_subplot(gs[2])
-ax_tbl.axis('off')
+    cols = ['', 'Tradables', 'Tradés', 'Wins', 'Losses',
+            'WR', 'Fill avg', 'PnL total', 'PnL/h', 'MaxDD']
+    rows_data = []
+    for s in [s_bl, s_bb]:
+        pnl_h = s['pnl'] / max(live_span_h, 0.01)
+        rows_data.append([
+            s['label'],
+            str(s['tradable']) if s['tradable'] else '—',
+            str(s['n']),
+            str(s['wins']),
+            str(s['losses']),
+            f"{s['wr']:.1f}%",
+            f"{s['avg_fill']:.3f}" if s['avg_fill'] else '—',
+            f"${s['pnl']:+.1f}",
+            f"${pnl_h:+.2f}/h",
+            f"${s['maxdd']:.0f}",
+        ])
 
-cols = ['', 'Tradables', 'Tradés', 'Wins', 'Losses',
-        'WR', 'Fill avg', 'PnL total', 'PnL/h', 'MaxDD']
-rows_data = []
-for s in [s_bl, s_bb, s_alt]:
-    pnl_h = s['pnl'] / max(live_span_h, 0.01)
-    rows_data.append([
-        s['label'],
-        str(s['tradable']) if s['tradable'] else '—',
-        str(s['n']),
-        str(s['wins']),
-        str(s['losses']),
-        f"{s['wr']:.1f}%",
-        f"{s['avg_fill']:.3f}" if s['avg_fill'] else '—',
-        f"${s['pnl']:+.1f}",
-        f"${pnl_h:+.2f}/h",
-        f"${s['maxdd']:.0f}",
-    ])
+    tbl = ax_tbl.table(cellText=rows_data, colLabels=cols, loc='center', cellLoc='center')
+    tbl.auto_set_font_size(False); tbl.set_fontsize(10); tbl.scale(1, 2.4)
+    for j in range(len(cols)):
+        tbl[0, j].set_facecolor('#37474F')
+        tbl[0, j].set_text_props(color='white', fontweight='bold')
+    tbl[1, 0].set_facecolor('#FFEBEE')
+    tbl[2, 0].set_facecolor('#E3F2FD')
+    for j in range(1, len(cols)):
+        tbl[1, j].set_facecolor('#FFEBEE')
+        tbl[2, j].set_facecolor('#E3F2FD')
 
-tbl = ax_tbl.table(cellText=rows_data, colLabels=cols, loc='center', cellLoc='center')
-tbl.auto_set_font_size(False); tbl.set_fontsize(10); tbl.scale(1, 2.4)
-for j in range(len(cols)):
-    tbl[0, j].set_facecolor('#37474F')
-    tbl[0, j].set_text_props(color='white', fontweight='bold')
-tbl[1, 0].set_facecolor('#FFEBEE')
-tbl[2, 0].set_facecolor('#E3F2FD')
-tbl[3, 0].set_facecolor('#E8F5E9')
-for j in range(1, len(cols)):
-    tbl[1, j].set_facecolor('#FFEBEE')
-    tbl[2, j].set_facecolor('#E3F2FD')
-    tbl[3, j].set_facecolor('#E8F5E9')
+    ax_tbl.set_title(
+        f"Stats  {CUTOFF.strftime('%Y-%m-%d %H:%M')} UTC  ->  {live_span_h:.1f}h  "
+        f"(resolution via settlement.csv)",
+        fontsize=9, pad=6, fontweight='bold'
+    )
 
-ax_tbl.set_title(
-    f"Stats  {CUTOFF.strftime('%Y-%m-%d %H:%M')} UTC  ->  {live_span_h:.1f}h  "
-    f"(resolution via settlement.csv)",
-    fontsize=9, pad=6, fontweight='bold'
-)
+    fig.suptitle(
+        f'BTC Live vs Backtest — slope7 cap0.75 vol_net_1h≥60',
+        fontsize=13, fontweight='bold', y=0.99
+    )
 
-fig.suptitle(
-    f'BTC Live vs Backtest — vrs_lin sl=10 cap=0.55 vrs1h b=150 g=0.5-1.5',
-    fontsize=13, fontweight='bold', y=0.99
-)
+    out = OUT_DIR / "live_vs_bt_recap.png"
+    plt.savefig(out, dpi=150, bbox_inches='tight')
+    plt.close('all')
+    print(f"\n-> {out}", flush=True)
 
-out = OUT_DIR / "live_vs_bt_recap.png"
-plt.savefig(out, dpi=150, bbox_inches='tight')
-plt.close('all')
-print(f"\n-> {out}", flush=True)
+    # Console recap
+    print(f"\n=== RECAP ({live_span_h:.1f}h depuis cutoff) ===")
+    for s in [s_bl, s_bb]:
+        pnl_h = s['pnl'] / max(live_span_h, 0.01)
+        print(f"  {s['label']:<18} T={s['n']:>3}  tradable={s['tradable']:>4}  "
+              f"W={s['wins']} L={s['losses']}  WR={s['wr']:.1f}%  "
+              f"fill={s['avg_fill']:.3f}  PnL={s['pnl']:+.1f}$  "
+              f"({pnl_h:+.2f}$/h)  maxDD=${s['maxdd']:.0f}")
 
-# Console recap
-print(f"\n=== RECAP ({live_span_h:.1f}h depuis cutoff) ===")
-for s in [s_bl, s_bb, s_alt]:
-    pnl_h = s['pnl'] / max(live_span_h, 0.01)
-    print(f"  {s['label']:<18} T={s['n']:>3}  tradable={s['tradable']:>4}  "
-          f"W={s['wins']} L={s['losses']}  WR={s['wr']:.1f}%  "
-          f"fill={s['avg_fill']:.3f}  PnL={s['pnl']:+.1f}$  "
-          f"({pnl_h:+.2f}$/h)  maxDD=${s['maxdd']:.0f}")
+    # Détail pertes live
+    losses_live = [t for t in btc_live if not t.get('won') and t.get('won') is not None]
+    if losses_live:
+        print(f"\n  Pertes live ({len(losses_live)}) :")
+        for t in losses_live:
+            src = t.get('src', '?')
+            print(f"    {t['ts'].strftime('%Y-%m-%d %H:%M')} UTC  tf={t['tf']}  "
+                  f"pnl={t['pnl']:+.2f}$  cost={t['cost']:.2f}$  fill={t.get('avg_fill',0):.3f}  [{src}]")
 
-# Détail pertes live
-losses_live = [t for t in btc_live if not t.get('won') and t.get('won') is not None]
-if losses_live:
-    print(f"\n  Pertes live ({len(losses_live)}) :")
-    for t in losses_live:
-        src = t.get('src', '?')
-        print(f"    {t['ts'].strftime('%Y-%m-%d %H:%M')} UTC  tf={t['tf']}  "
-              f"pnl={t['pnl']:+.2f}$  cost={t['cost']:.2f}$  fill={t.get('avg_fill',0):.3f}  [{src}]")

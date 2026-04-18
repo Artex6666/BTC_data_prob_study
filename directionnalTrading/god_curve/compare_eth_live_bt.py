@@ -56,7 +56,7 @@ for fn in sorted(glob.glob(LIVE_DIR + "*.jsonl")):
             except Exception:
                 pass
     fills = [e for e in events
-             if e.get("event") == "window_ended"
+             if e.get("event") in ("window_ended", "window_settled")
              and (e.get("up_shares", 0) > 0 or e.get("down_shares", 0) > 0)]
     if not fills:
         continue

@@ -1,0 +1,250 @@
+[
+  {
+    "asset": "btc",
+    "covered_markets": 694,
+    "candidate_trades": 506,
+    "bot_total_pnl": 11491.43,
+    "bot_total_spent": 855271.8999999999,
+    "bot_roi_pct": 1.3435996201909595,
+    "candidate_total_pnl": -749.046996279297,
+    "candidate_total_spent": 10977.765000000001,
+    "candidate_roi_pct": -6.823310539798373,
+    "candidate_trade_wr": 0.45849802371541504,
+    "rules": {
+      "btc|h1|Down": {
+        "require_aligned": true,
+        "require_recross": true,
+        "abs_open_pct_min": 0.0758899842257658,
+        "abs_move_30s_pct_min": 0.01784578269893025,
+        "ask_c_max": 71.0,
+        "elapsed_frac_min": 0.3445320555555555,
+        "elapsed_frac_max": 0.8892828888888888,
+        "score": 0.017288053341760406,
+        "precision": 0.11878453038674033,
+        "recall": 0.021182266009852218,
+        "predicted_rows": 362,
+        "buy_rows": 2030,
+        "entry_size_usd": 14.075
+      },
+      "btc|h1|Up": {
+        "require_aligned": true,
+        "require_recross": true,
+        "abs_open_pct_min": 0.08043177581962885,
+        "abs_move_30s_pct_min": 0.0148282493798544,
+        "ask_c_max": 68.0,
+        "elapsed_frac_min": 0.1956575555555555,
+        "elapsed_frac_max": 0.8796564583333333,
+        "score": 0.014538682664203328,
+        "precision": 0.09430604982206406,
+        "recall": 0.02376681614349776,
+        "predicted_rows": 562,
+        "buy_rows": 2230,
+        "entry_size_usd": 12.870000000000001
+      },
+      "btc|m15|Down": {
+        "require_aligned": true,
+        "require_recross": true,
+        "abs_open_pct_min": 0.0447013180422323,
+        "abs_move_30s_pct_min": 0.0117137325136258,
+        "ask_c_max": 71.0,
+        "elapsed_frac_min": 0.2343222222222222,
+        "elapsed_frac_max": 0.9010844444444444,
+        "score": 0.015399507841887377,
+        "precision": 0.122568093385214,
+        "recall": 0.01578551741418191,
+        "predicted_rows": 514,
+        "buy_rows": 3991,
+        "entry_size_usd": 11.2
+      },
+      "btc|m15|Up": {
+        "require_aligned": true,
+        "require_recross": true,
+        "abs_open_pct_min": 0.03930663746377,
+        "abs_move_30s_pct_min": 0.0113642337306474,
+        "ask_c_max": 72.0,
+        "elapsed_frac_min": 0.2209966666666666,
+        "elapsed_frac_max": 0.9051505555555557,
+        "score": 0.010768290551484191,
+        "precision": 0.09534368070953436,
+        "recall": 0.012755858795609611,
+        "predicted_rows": 451,
+        "buy_rows": 3371,
+        "entry_size_usd": 16.299999999999997
+      },
+      "btc|m5|Down": {
+        "require_aligned": true,
+        "require_recross": true,
+        "abs_open_pct_min": 0.0226361608423938,
+        "abs_move_30s_pct_min": 0.01372610301061495,
+        "ask_c_max": 69.0,
+        "elapsed_frac_min": 0.2431433333333333,
+        "elapsed_frac_max": 0.9431016666666667,
+        "score": 0.0367530646324692,
+        "precision": 0.22838499184339314,
+        "recall": 0.02589715131335553,
+        "predicted_rows": 613,
+        "buy_rows": 5406,
+        "entry_size_usd": 23.43
+      },
+      "btc|m5|Up": {
+        "require_aligned": false,
+        "require_recross": false,
+        "abs_open_pct_min": 0.02155155269059835,
+        "abs_move_30s_pct_min": 0.0133754856014104,
+        "ask_c_max": 69.0,
+        "elapsed_frac_min": 0.2488733333333333,
+        "elapsed_frac_max": 0.9473166666666667,
+        "score": 0.06486926731795885,
+        "precision": 0.16269598859702708,
+        "recall": 0.1589733386390768,
+        "predicted_rows": 4911,
+        "buy_rows": 5026,
+        "entry_size_usd": 23.925
+      }
+    },
+    "exit_policies": {
+      "btc|h1": {
+        "take_profit_c": null,
+        "stop_loss_c": 6,
+        "max_hold_s": null,
+        "mean_pnl_per_100usd": -1.2419972138356619
+      },
+      "btc|m15": {
+        "take_profit_c": null,
+        "stop_loss_c": null,
+        "max_hold_s": null,
+        "mean_pnl_per_100usd": 2.452818381824854
+      },
+      "btc|m5": {
+        "take_profit_c": null,
+        "stop_loss_c": null,
+        "max_hold_s": null,
+        "mean_pnl_per_100usd": 4.135430589989966
+      }
+    }
+  },
+  {
+    "asset": "eth",
+    "covered_markets": 692,
+    "candidate_trades": 274,
+    "bot_total_pnl": 4652.469999999999,
+    "bot_total_spent": 313745.96,
+    "bot_roi_pct": 1.4828780584138832,
+    "candidate_total_pnl": 10.548687794730505,
+    "candidate_total_spent": 1855.22,
+    "candidate_roi_pct": 0.5685949803651591,
+    "candidate_trade_wr": 0.5547445255474452,
+    "rules": {
+      "eth|h1|Down": {
+        "require_aligned": true,
+        "require_recross": true,
+        "abs_open_pct_min": 0.1321817012624649,
+        "abs_move_30s_pct_min": 0.037327863917448335,
+        "ask_c_max": 75.0,
+        "elapsed_frac_min": 0.3711082777777777,
+        "elapsed_frac_max": 0.9310264166666666,
+        "score": 0.012079480222089411,
+        "precision": 0.08888888888888889,
+        "recall": 0.018467220683287166,
+        "predicted_rows": 225,
+        "buy_rows": 1083,
+        "entry_size_usd": 12.49
+      },
+      "eth|h1|Up": {
+        "require_aligned": true,
+        "require_recross": true,
+        "abs_open_pct_min": 0.08432542276996524,
+        "abs_move_30s_pct_min": 0.03997616816122855,
+        "ask_c_max": 69.0,
+        "elapsed_frac_min": 0.2828314444444444,
+        "elapsed_frac_max": 0.9309598472222222,
+        "score": 0.020815514244207974,
+        "precision": 0.2375,
+        "recall": 0.015676567656765675,
+        "predicted_rows": 80,
+        "buy_rows": 1212,
+        "entry_size_usd": 9.19
+      },
+      "eth|m15|Down": {
+        "require_aligned": true,
+        "require_recross": true,
+        "abs_open_pct_min": 0.0632455262032593,
+        "abs_move_30s_pct_min": 0.01735866361822155,
+        "ask_c_max": 74.0,
+        "elapsed_frac_min": 0.2273955555555555,
+        "elapsed_frac_max": 0.8985594444444445,
+        "score": 0.005016990253635856,
+        "precision": 0.04935622317596566,
+        "recall": 0.010332434860736747,
+        "predicted_rows": 466,
+        "buy_rows": 2226,
+        "entry_size_usd": 6.225
+      },
+      "eth|m15|Up": {
+        "require_aligned": true,
+        "require_recross": true,
+        "abs_open_pct_min": 0.0542941274297907,
+        "abs_move_30s_pct_min": 0.03202071743367182,
+        "ask_c_max": 71.0,
+        "elapsed_frac_min": 0.32328755555555555,
+        "elapsed_frac_max": 0.8963058888888888,
+        "score": 0.005142377326247792,
+        "precision": 0.10377358490566038,
+        "recall": 0.005011389521640091,
+        "predicted_rows": 106,
+        "buy_rows": 2195,
+        "entry_size_usd": 7.82
+      },
+      "eth|m5|Down": {
+        "require_aligned": true,
+        "require_recross": false,
+        "abs_open_pct_min": 0.02702211837049045,
+        "abs_move_30s_pct_min": 0.01497544760740605,
+        "ask_c_max": 69.0,
+        "elapsed_frac_min": 0.20905400000000002,
+        "elapsed_frac_max": 0.9432596666666666,
+        "score": 0.024525792282628422,
+        "precision": 0.1947565543071161,
+        "recall": 0.015858493443122904,
+        "predicted_rows": 534,
+        "buy_rows": 6558,
+        "entry_size_usd": 6.28
+      },
+      "eth|m5|Up": {
+        "require_aligned": true,
+        "require_recross": false,
+        "abs_open_pct_min": 0.0264180112129763,
+        "abs_move_30s_pct_min": 0.015080534921165,
+        "ask_c_max": 65.0,
+        "elapsed_frac_min": 0.18988333333333332,
+        "elapsed_frac_max": 0.8628989999999999,
+        "score": 0.011430485236557656,
+        "precision": 0.17763157894736842,
+        "recall": 0.008450704225352112,
+        "predicted_rows": 304,
+        "buy_rows": 6390,
+        "entry_size_usd": 6.27
+      }
+    },
+    "exit_policies": {
+      "eth|h1": {
+        "take_profit_c": null,
+        "stop_loss_c": null,
+        "max_hold_s": null,
+        "mean_pnl_per_100usd": 5.785930598614225
+      },
+      "eth|m15": {
+        "take_profit_c": null,
+        "stop_loss_c": 10,
+        "max_hold_s": null,
+        "mean_pnl_per_100usd": 2.3241251185308203
+      },
+      "eth|m5": {
+        "take_profit_c": 12,
+        "stop_loss_c": null,
+        "max_hold_s": 60,
+        "mean_pnl_per_100usd": 4.4137988452681
+      }
+    }
+  }
+]

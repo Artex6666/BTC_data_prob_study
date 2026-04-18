@@ -92,7 +92,7 @@ for tf in ['m5', 'm15', 'h1']:
         ts_open = pd.to_datetime(wo["ts"])
         if ts_open.timestamp() < CUTOFF_TS: continue
 
-        we = next((e for e in events if e.get("event") == "window_ended"), None)
+        we = next((e for e in events if e.get("event") in ("window_ended", "window_settled")), None)
         if we is None: continue
 
         up_s = float(we.get("up_shares", 0))

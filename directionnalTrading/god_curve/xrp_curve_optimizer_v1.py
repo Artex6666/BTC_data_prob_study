@@ -3,8 +3,8 @@ xrp_curve_optimizer_v1.py — Optimizer M5 XRP
 
 Dérivé de sol_curve_optimizer_v1.py.
 Slopes/intercepts/vol seuils calibrés pour XRP (~$1.30, vol1h médiane ~$0.008).
-  thresh = slope * remain_s + intercept  (en $)
-  slope=0.0001, remain=60s → thresh=$0.006 (~0.46% du spot)
+  Comme ETH : intercept_mode=floor → thresh ($) = max(slope * g * remain_s, intercept)
+  (sinon ce serait slope*remain + intercept). slope=0.0001, remain=60s → partie linéaire $0.006
 """
 import argparse, pickle, sys, time
 from collections import deque
@@ -38,13 +38,19 @@ CNET_N_LIST = [2, 5, 10]
 OUT_ROOT = ROOT / "god_curve" / "xrp_curve_results_v1"
 
 DEFAULT_CSV_PATHS = [
+    str(ROOT / "Datas" / "csv" / "XRP.csv"),
     str(ROOT / "reportLive" / "safeChase" / "XRP.csv"),
 ]
 
 # Grilles calibrées XRP (~$1.30)
-# thresh à remain=60s : slope*60. Ex: 0.0001*60=$0.006 (~0.46%)
-SLOPE_GRID     = [0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003]
-INTERCEPT_GRID = [0.0, 0.0005, 0.001, 0.003]
+# Seuil trigger (floor) : max(slope*g*remain, intercept). À remain=60s : max(slope*60, intercept).
+# Densifiée dans la zone basse/médiane.
+SLOPE_GRID     = [
+    0.00005, 0.00008,
+    0.0001, 0.00015, 0.0002, 0.0003, 0.0005,
+    0.001,
+]
+INTERCEPT_GRID = [0.0, 0.00005, 0.0001, 0.00015, 0.0002, 0.0003]
 CAP_GRID       = [0.55, 0.65, 0.75, 0.85, 0.90]
 
 # Vol range/net : médiane vol1h~$0.008-0.015, p90~$0.025
@@ -71,6 +77,7 @@ def build_configs():
                 configs.append(dict(
                     label='linear', curve='linear',
                     slope=slope, intercept=intercept,
+                    intercept_mode='floor',
                     eq_cap=cap, max_losses_cb=None,
                     vol_lb_h=None, vol_thresh=None,
                 ))
@@ -84,6 +91,7 @@ def build_configs():
                         configs.append(dict(
                             label='vol_rng_lin', curve='linear',
                             slope=slope, intercept=intercept,
+                            intercept_mode='floor',
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=float(lb), vol_thresh=thresh, vol_type='range',
                         ))
@@ -97,6 +105,7 @@ def build_configs():
                         configs.append(dict(
                             label='vol_net_lin', curve='linear',
                             slope=slope, intercept=intercept,
+                            intercept_mode='floor',
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=float(lb), vol_thresh=thresh, vol_type='net',
                         ))
@@ -110,6 +119,7 @@ def build_configs():
                         configs.append(dict(
                             label='vol_trend_lin', curve='linear',
                             slope=slope, intercept=intercept,
+                            intercept_mode='floor',
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=float(lb), vol_thresh=thresh, vol_type='trend',
                         ))
@@ -123,6 +133,7 @@ def build_configs():
                         configs.append(dict(
                             label='vol_pctr_lin', curve='linear',
                             slope=slope, intercept=intercept,
+                            intercept_mode='floor',
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=float(lb), vol_thresh=thresh, vol_type='pct_range',
                         ))
@@ -136,6 +147,7 @@ def build_configs():
                         configs.append(dict(
                             label='vol_pctn_lin', curve='linear',
                             slope=slope, intercept=intercept,
+                            intercept_mode='floor',
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=float(lb), vol_thresh=thresh, vol_type='pct_net',
                         ))
@@ -149,6 +161,7 @@ def build_configs():
                         configs.append(dict(
                             label='vrs_lin', curve='linear',
                             slope=slope, intercept=0.0,
+                            intercept_mode='floor',
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=None, vol_thresh=None,
                             vrs_enabled=True,
@@ -165,6 +178,7 @@ def build_configs():
                         configs.append(dict(
                             label='cnet_lin', curve='linear',
                             slope=slope, intercept=intercept,
+                            intercept_mode='floor',
                             eq_cap=cap, max_losses_cb=None,
                             vol_lb_h=None, vol_thresh=None,
                             cnet_n=n, cnet_thresh=float(thresh),
@@ -279,6 +293,7 @@ def worker_fn(config_batch):
             day_pnls[c['ce'].date()] = day_pnls.get(c['ce'].date(), 0.0) + pnl
 
         if trades == 0: continue
+        if trades / (_TOTAL_HOURS / 24) < 15: continue
 
         wr          = wins / trades * 100
         losing_days = sum(1 for v in day_pnls.values() if v < 0)
@@ -298,7 +313,10 @@ def worker_fn(config_batch):
 
 
 def fmt_row(i, r, days):
-    curve_s = f"sl={r['slope']:.6f} int={r['intercept']:.5f}"
+    if r.get('intercept_mode') == 'floor':
+        curve_s = f"sl={r['slope']:.6f} floor={r['intercept']:.5f}"
+    else:
+        curve_s = f"sl={r['slope']:.6f} int={r['intercept']:.5f}"
     cb_s    = str(r['max_losses_cb']) if r['max_losses_cb'] else "-"
     if r.get('vol_thresh') is not None:
         vt = r.get('vol_type', 'range')
@@ -387,6 +405,30 @@ def main():
         for i, r in enumerate(all_results[:args.top]):
             lines.append(fmt_row(i+1, r, days))
         lines.append("\n")
+
+    all_results_rf = sorted(all_results, key=lambda x: -x['rf'])
+    best_global = all_results_rf[0] if all_results_rf else None
+    by_consist = sorted(
+        [r for r in all_results if r['trades'] >= 100],
+        key=lambda x: (x['losing_days'], -x['rf']),
+    )
+    best_consistent = by_consist[0] if by_consist else None
+    best_frequent = max(all_results, key=lambda x: x['trades']) if all_results else None
+
+    def synth_line(title, r):
+        if r is None:
+            return f"{title}: N/A\n"
+        return (
+            f"{title}: {r['label']} | sl={r['slope']:.6f} floor={r['intercept']:.5f} "
+            f"cap={r['eq_cap']:.2f} | trades={r['trades']} | trades/j={r['trades']/days:.1f} "
+            f"| PnL total=${r['total_pnl']:.2f} | $/j=${r['total_pnl']/days:.2f} | WR={r['wr']:.1f}% "
+            f"| RF={r['rf']:.1f}x | maxDD=${r['max_dd']:.0f}\n"
+        )
+
+    lines.append(f">>> SYNTHESE FINALE\n{sep}")
+    lines.append(synth_line("Best global RF", best_global))
+    lines.append(synth_line("Best consistency (min losing_days, min 100 trades)", best_consistent))
+    lines.append(synth_line("Most trades", best_frequent))
 
     txt = out_dir / f"xrp_curve_results_v1_{ts_str}.txt"
     txt.write_text("".join(lines), encoding='utf-8')

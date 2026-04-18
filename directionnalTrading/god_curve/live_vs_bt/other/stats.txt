@@ -1,0 +1,37 @@
+=== LIVE vs BACKTEST  (depuis 2026-04-09 13:12:20+00:00) ===
+
+  BTC Live: T=354  WR=97.7%  PnL/j=$475.8  AvgWin=$8.23  AvgLoss=$-166.45  AvgFill=0.954  maxDD=$393  RF=3.9x
+  BTC BT: T=143  WR=94.4%  PnL/j=$76.7  AvgWin=$11.76  AvgLoss=$-167.27  AvgFill=0.937  maxDD=$547  RF=0.5x
+  ETH Live: T=0  WR=0.0%  PnL/j=$0.0  AvgWin=$0.00  AvgLoss=$0.00  AvgFill=0.000  maxDD=$0  RF=0.0x
+  ETH BT: T=53  WR=96.2%  PnL/j=$305.4  AvgWin=$25.34  AvgLoss=$-150.00  AvgFill=0.924  maxDD=$150  RF=6.6x
+
+=== DIAGNOSTIC FILL PRICE ===
+  BTC : fill live moy=0.954  vs cap BT=0.75
+  ETH : fill live moy=0.960  vs cap ETH=0.55
+  BTC au cap 0.75 : win/ordre = $100*(0.99/0.75-1) = $32.00
+  BTC au fill 0.95 : win/ordre = $100*(0.99/0.95-1) = $3.80
+  ETH au cap 0.55 : win/ordre = $150*(0.99/0.55-1) = $120.0
+  ETH au fill 0.96 : win/ordre = $150*(0.99/0.96-1) = $4.69
+  -> Voir pnl_by_fill_bucket.png
+
+=== MATCHED TRADES BTC (M5 uniquement) ===
+  BT M5 trades            : 126  (total tous TF : 143)
+  Live M5 trades          : 294  (total tous TF : 354)
+  Contrats M5 matchés     : 115
+  Live-only M5            : 179  (vol gate ok live mais pas en BT, ou bot speed)
+  BT-only M5              : 11  (vol gate ok BT mais bot hors-ligne / timing off)
+  NOTE: M15/H1 exclus — le live re-check vol gate chaque 5min (BT check seulement à l'open du contrat)
+
+  Sur les 115 contrats M5 matchés :
+    PnL live : $855.35   WR live : 94.8%   fill moy : 0.925
+    PnL BT   : $262.28   WR BT   : 94.8%   fill moy : 0.939
+    Même signe W/L : 111/115 (97%)
+    PnL gap live vs BT : $593.07  (+226%)
+
+=== MATCHED TRADES ETH (M5 uniquement) ===
+  BT M5 trades            : 43  (total tous TF : 53)
+  Live M5 trades          : 0  (total tous TF : 0)
+  Contrats M5 matchés     : 0
+  Live-only M5            : 0  (vol gate ok live mais pas en BT, ou bot speed)
+  BT-only M5              : 43  (vol gate ok BT mais bot hors-ligne / timing off)
+  NOTE: M15/H1 exclus — le live re-check vol gate chaque 5min (BT check seulement à l'open du contrat)

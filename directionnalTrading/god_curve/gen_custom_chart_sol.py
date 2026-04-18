@@ -4,7 +4,9 @@ Génère deux overlay charts SOL avec configs manuelles :
   - overlay_last4d.png : période récente (reportLive SOL.csv)
 
 Une seule courbe par config (max_orders=2 fixe), scalée à maxDD=$500.
+CLI : -4d / --last-4d ; --day YYYY-MM-DD (un jour UTC, dossier day_*/).
 """
+import argparse
 import sys
 from pathlib import Path
 from collections import defaultdict
@@ -31,6 +33,7 @@ from chart_utils import (
     chart_equity, chart_entry_and_loss_analytics,
     TIMEFRAMES, VOL_LBS, COLORS, make_xlabels, _rf_str_hourly_equity, _esc,
 )
+from gen_custom_chart_common import utc_day_bounds, filter_contracts_by_utc_day
 
 # ── Configs SOL ───────────────────────────────────────────────────────────────
 # A remplir après premiers résultats optimizer
@@ -151,16 +154,19 @@ def custom_overlay(series_list, n_hours, hour_index, out_path, title):
 
 
 # ── Moteur principal ──────────────────────────────────────────────────────────
-def run_chart(csv_paths, out_dir, title_prefix, last_days=None):
+def run_chart(csv_paths, out_dir, title_prefix, last_days=None, day=None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    day_bounds = utc_day_bounds(day) if day else None
 
     contracts_by_tf = []
     m5_ref = None
     for tf_floor, bid_up, bid_down, ask_up, ask_down in TIMEFRAMES:
         try:
             cts = load_contracts(csv_paths, tf_floor, bid_up, bid_down, ask_up, ask_down)
-            if last_days is not None and cts:
+            if day_bounds:
+                cts = filter_contracts_by_utc_day(cts, day_bounds[0], day_bounds[1])
+            elif last_days is not None and cts:
                 cutoff = cts[-1]['ce'] - np.timedelta64(int(last_days * 24 * 3600), 's')
                 cts = [c for c in cts if c['ce'] >= cutoff]
             if tf_floor == '5min':
@@ -179,8 +185,11 @@ def run_chart(csv_paths, out_dir, title_prefix, last_days=None):
             attach_settlement_outcomes(cts, ASSET, tf=tf_floor)
 
     hour_index, n_hours = build_hour_index(contracts_by_tf)
+    if n_hours == 0:
+        print("  Aucun contrat sur cette période — rien à tracer.", flush=True)
+        return
     days = n_hours / 24
-    print(f"  {n_hours} heures tradées ({days:.1f}j)", flush=True)
+    print(f"  {n_hours} heures tradées ({days:.1f}j)" + (f"  (jour UTC {day})" if day else ""), flush=True)
 
     series_list = []
 
@@ -237,11 +246,37 @@ def run_chart(csv_paths, out_dir, title_prefix, last_days=None):
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    print("\n=== SOL Chart 1 : toute la période ===")
-    run_chart(CSV_FULL, OUT_DIR / "all", "Custom SOL - Full")
+    parser = argparse.ArgumentParser(description="Custom god_curve charts (SOL)")
+    parser.add_argument(
+        "-4d",
+        "--last-4d",
+        action="store_true",
+        dest="last_4d_only",
+        help="Générer uniquement la chart last4d (filtre 4 jours), pas la période full.",
+    )
+    parser.add_argument(
+        "--day",
+        type=str,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Un jour UTC (ce). Sortie custom_chart_sol/day_*/.",
+    )
+    args = parser.parse_args()
 
-    print("\n=== SOL Chart 2 : 4 derniers jours ===")
-    run_chart(CSV_FULL, OUT_DIR / "last4d", "Custom SOL - Last 4d", last_days=4)
+    if args.day:
+        d = args.day.strip()
+        sub = OUT_DIR / f"day_{d}"
+        print(f"\n=== SOL jour UTC {d} ===", flush=True)
+        run_chart(CSV_FULL, sub, f"Custom SOL - {d}", day=d)
+        print(f"\nOverlay -> {sub / 'overlay_all.png'}")
+    else:
+        if not args.last_4d_only:
+            print("\n=== SOL Chart 1 : toute la période ===")
+            run_chart(CSV_FULL, OUT_DIR / "all", "Custom SOL - Full")
 
-    print(f"\nOverlay full   -> {OUT_DIR / 'all' / 'overlay_all.png'}")
-    print(f"Overlay last4d -> {OUT_DIR / 'last4d' / 'overlay_all.png'}")
+        print("\n=== SOL Chart 2 : 4 derniers jours ===")
+        run_chart(CSV_FULL, OUT_DIR / "last4d", "Custom SOL - Last 4d", last_days=4)
+
+        if not args.last_4d_only:
+            print(f"\nOverlay full   -> {OUT_DIR / 'all' / 'overlay_all.png'}")
+        print(f"Overlay last4d -> {OUT_DIR / 'last4d' / 'overlay_all.png'}")

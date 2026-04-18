@@ -86,7 +86,7 @@ def parse_live(asset_dir):
                     p = float(d.get('price', 0))
                     if p > 0: fills_prices.append(p)
 
-                elif ev == 'window_ended' and cur:
+                elif ev in ('window_ended', 'window_settled') and cur:
                     up_s  = float(d.get('up_shares',  0))
                     dn_s  = float(d.get('down_shares', 0))
                     up_c  = float(d.get('up_cost',    0))

@@ -1,0 +1,68 @@
+{
+  "asset": "eth",
+  "rows": 178103,
+  "buy_rows": 19664,
+  "markets": 692,
+  "patterns": {
+    "eth|h1|Down": {
+      "n_buys": 1083,
+      "weighted_aligned": 0.8197293141011049,
+      "weighted_recross": 0.9492939037623227,
+      "median_signed_open_pct": 0.016045588921732887,
+      "median_signed_move_30s_pct": 0.006806127459315045,
+      "median_ask_c": 55.00000000000001,
+      "median_elapsed_frac": 0.6364261111111111,
+      "median_buy_cost_usd": 12.49
+    },
+    "eth|h1|Up": {
+      "n_buys": 1212,
+      "weighted_aligned": 0.7349973492691754,
+      "weighted_recross": 0.9368681962262477,
+      "median_signed_open_pct": -0.010645369981746458,
+      "median_signed_move_30s_pct": 0.008268885744671132,
+      "median_ask_c": 47.0,
+      "median_elapsed_frac": 0.6903086111111112,
+      "median_buy_cost_usd": 9.19
+    },
+    "eth|m15|Down": {
+      "n_buys": 2226,
+      "weighted_aligned": 0.8094161402941908,
+      "weighted_recross": 0.6955411358612346,
+      "median_signed_open_pct": -0.006818901729895377,
+      "median_signed_move_30s_pct": 0.0,
+      "median_ask_c": 44.0,
+      "median_elapsed_frac": 0.5989877777777778,
+      "median_buy_cost_usd": 6.225
+    },
+    "eth|m15|Up": {
+      "n_buys": 2195,
+      "weighted_aligned": 0.6655356586183121,
+      "weighted_recross": 0.6952656346058262,
+      "median_signed_open_pct": -0.013052558301426202,
+      "median_signed_move_30s_pct": -0.00048670089795164773,
+      "median_ask_c": 47.0,
+      "median_elapsed_frac": 0.5463422222222223,
+      "median_buy_cost_usd": 7.82
+    },
+    "eth|m5|Down": {
+      "n_buys": 6558,
+      "weighted_aligned": 0.740246858129916,
+      "weighted_recross": 0.5820466140210734,
+      "median_signed_open_pct": -0.002918373106007952,
+      "median_signed_move_30s_pct": -0.00045816728793739885,
+      "median_ask_c": 47.0,
+      "median_elapsed_frac": 0.5298316666666667,
+      "median_buy_cost_usd": 6.28
+    },
+    "eth|m5|Up": {
+      "n_buys": 6390,
+      "weighted_aligned": 0.6579534036104565,
+      "weighted_recross": 0.5452829802213186,
+      "median_signed_open_pct": -0.009456175355307189,
+      "median_signed_move_30s_pct": -0.00048439051563326337,
+      "median_ask_c": 44.0,
+      "median_elapsed_frac": 0.522325,
+      "median_buy_cost_usd": 6.27
+    }
+  }
+}

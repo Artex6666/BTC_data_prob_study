@@ -59,7 +59,7 @@ for tf in ['m5', 'm15', 'h1']:
         wo = next((e for e in events if e.get("event") == "window_open"), None)
         if wo is None: continue
         if pd.to_datetime(wo["ts"]).timestamp() < CUTOFF_TS: continue
-        we = next((e for e in events if e.get("event") == "window_ended"), None)
+        we = next((e for e in events if e.get("event") in ("window_ended", "window_settled")), None)
         if we is None: continue
         shares = float(we.get("up_shares", 0)) + float(we.get("down_shares", 0))
         if shares > 1e-9:

@@ -1,0 +1,163 @@
+======================================================================
+ANALYSE DES TRIGGERS — ordresMarkets (BTC & ETH)
+======================================================================
+
+────────────────────────────────────────────────────────────
+BTC | H1  (33 contrats)
+────────────────────────────────────────────────────────────
+  Contrats avec les 2 côtés  : 100.0%
+  Position nette finale OK   : 90.9%  (aléatoire=50%)
+
+  SWITCHES DE CÔTÉ
+    Switches / contrat (moy) : 31.5
+    % switches avec recross=1: 87.9%
+    % switches avec aligned=1: 50.0%
+
+  PREMIER ACHAT
+    elapsed_frac médian      : 0.006  (0.6% du contrat)
+    ask_c médian             : 50c
+    % aligned=1              : 66.7%
+    % recross=1              : 36.4%
+    % 1er côté = bon côté    : 45.5%
+
+  ASK_C MOYEN
+    Achats UP                : 47.3c
+    Achats DOWN              : 52.0c
+
+────────────────────────────────────────────────────────────
+BTC | M15  (167 contrats)
+────────────────────────────────────────────────────────────
+  Contrats avec les 2 côtés  : 100.0%
+  Position nette finale OK   : 88.6%  (aléatoire=50%)
+
+  SWITCHES DE CÔTÉ
+    Switches / contrat (moy) : 16.1
+    % switches avec recross=1: 63.1%
+    % switches avec aligned=1: 50.0%
+
+  PREMIER ACHAT
+    elapsed_frac médian      : 0.025  (2.5% du contrat)
+    ask_c médian             : 47c
+    % aligned=1              : 37.1%
+    % recross=1              : 21.6%
+    % 1er côté = bon côté    : 41.3%
+
+  ASK_C MOYEN
+    Achats UP                : 49.5c
+    Achats DOWN              : 48.5c
+
+────────────────────────────────────────────────────────────
+BTC | M5  (494 contrats)
+────────────────────────────────────────────────────────────
+  Contrats avec les 2 côtés  : 98.0%
+  Position nette finale OK   : 80.6%  (aléatoire=50%)
+
+  SWITCHES DE CÔTÉ
+    Switches / contrat (moy) : 9.4
+    % switches avec recross=1: 54.1%
+    % switches avec aligned=1: 48.5%
+
+  PREMIER ACHAT
+    elapsed_frac médian      : 0.050  (5.0% du contrat)
+    ask_c médian             : 49c
+    % aligned=1              : 42.7%
+    % recross=1              : 17.4%
+    % 1er côté = bon côté    : 54.0%
+
+  ASK_C MOYEN
+    Achats UP                : 49.6c
+    Achats DOWN              : 49.2c
+
+────────────────────────────────────────────────────────────
+ETH | H1  (33 contrats)
+────────────────────────────────────────────────────────────
+  Contrats avec les 2 côtés  : 100.0%
+  Position nette finale OK   : 93.9%  (aléatoire=50%)
+
+  SWITCHES DE CÔTÉ
+    Switches / contrat (moy) : 19.3
+    % switches avec recross=1: 91.1%
+    % switches avec aligned=1: 49.3%
+
+  PREMIER ACHAT
+    elapsed_frac médian      : 0.004  (0.4% du contrat)
+    ask_c médian             : 48c
+    % aligned=1              : 69.7%
+    % recross=1              : 57.6%
+    % 1er côté = bon côté    : 60.6%
+
+  ASK_C MOYEN
+    Achats UP                : 48.7c
+    Achats DOWN              : 52.0c
+
+────────────────────────────────────────────────────────────
+ETH | M15  (166 contrats)
+────────────────────────────────────────────────────────────
+  Contrats avec les 2 côtés  : 97.6%
+  Position nette finale OK   : 85.5%  (aléatoire=50%)
+
+  SWITCHES DE CÔTÉ
+    Switches / contrat (moy) : 10.9
+    % switches avec recross=1: 66.2%
+    % switches avec aligned=1: 49.0%
+
+  PREMIER ACHAT
+    elapsed_frac médian      : 0.039  (3.9% du contrat)
+    ask_c médian             : 46c
+    % aligned=1              : 39.8%
+    % recross=1              : 32.5%
+    % 1er côté = bon côté    : 45.2%
+
+  ASK_C MOYEN
+    Achats UP                : 50.0c
+    Achats DOWN              : 48.6c
+
+────────────────────────────────────────────────────────────
+ETH | M5  (493 contrats)
+────────────────────────────────────────────────────────────
+  Contrats avec les 2 côtés  : 99.2%
+  Position nette finale OK   : 85.2%  (aléatoire=50%)
+
+  SWITCHES DE CÔTÉ
+    Switches / contrat (moy) : 11.5
+    % switches avec recross=1: 50.6%
+    % switches avec aligned=1: 49.2%
+
+  PREMIER ACHAT
+    elapsed_frac médian      : 0.055  (5.5% du contrat)
+    ask_c médian             : 49c
+    % aligned=1              : 42.4%
+    % recross=1              : 21.3%
+    % 1er côté = bon côté    : 50.3%
+
+  ASK_C MOYEN
+    Achats UP                : 48.2c
+    Achats DOWN              : 49.2c
+
+======================================================================
+ASK_C : DISTRIBUTION BUY vs NON-BUY
+======================================================================
+
+  BTC | H1
+    Buy  ask_c : mean=49.2  med=50.0  p25=25.0  p75=70.0
+    No-buy ask : mean=51.4  med=51.0  p25=30.0  p75=74.0
+
+  BTC | M15
+    Buy  ask_c : mean=46.8  med=47.0  p25=20.0  p75=72.0
+    No-buy ask : mean=51.9  med=51.0  p25=27.0  p75=78.0
+
+  BTC | M5
+    Buy  ask_c : mean=50.4  med=51.0  p25=32.0  p75=69.0
+    No-buy ask : mean=50.8  med=51.0  p25=29.0  p75=73.0
+
+  ETH | H1
+    Buy  ask_c : mean=48.7  med=50.0  p25=21.0  p75=72.0
+    No-buy ask : mean=52.1  med=52.0  p25=29.0  p75=76.0
+
+  ETH | M15
+    Buy  ask_c : mean=46.8  med=45.0  p25=20.0  p75=72.0
+    No-buy ask : mean=52.0  med=52.0  p25=26.0  p75=79.0
+
+  ETH | M5
+    Buy  ask_c : mean=46.1  med=45.5  p25=23.0  p75=67.0
+    No-buy ask : mean=52.1  med=52.0  p25=28.0  p75=77.0

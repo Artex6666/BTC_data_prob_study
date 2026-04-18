@@ -1,12 +1,15 @@
 """
 Comparatif VRS statique vs VRS dynamique (recalcul toutes les 5min pour M15/H1).
 
+CLI : -4d / --last-4d ; --day YYYY-MM-DD (dossier custom_chart/test/day_*/).
+
 Bug identifié : pour les contrats M15 et H1, _g_vrs est calculé une seule
 fois à l'open du contrat (vol figée). La variante dynamique le recalcule à
 chaque bucket 5min en lisant le vol M5 courant.
 
 Config testée : vrs_lin sl=10 cap=0.55 vrs1h b=150 g=0.50-1.50 (baseline BTC live)
 """
+import argparse
 import sys
 from pathlib import Path
 from collections import defaultdict
@@ -31,6 +34,7 @@ from chart_utils import (
     build_cumulative, build_hour_index,
     TIMEFRAMES, VOL_LBS, COLORS, make_xlabels, _rf_str_hourly_equity, _esc,
 )
+from gen_custom_chart_common import utc_day_bounds, filter_contracts_by_utc_day
 
 # ── Config testée ─────────────────────────────────────────────────────────────
 CFG = dict(
@@ -320,15 +324,18 @@ def print_tf_breakdown(cum_by_tf, label, days):
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
-def run_chart(csv_paths, out_dir, title_prefix):
+def run_chart(csv_paths, out_dir, title_prefix, day=None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    day_bounds = utc_day_bounds(day) if day else None
 
     contracts_by_tf = []
     m5_ref = None
     for tf_floor, bid_up, bid_down, ask_up, ask_down in TIMEFRAMES:
         try:
             cts = load_contracts(csv_paths, tf_floor, bid_up, bid_down, ask_up, ask_down)
+            if day_bounds:
+                cts = filter_contracts_by_utc_day(cts, day_bounds[0], day_bounds[1])
             if tf_floor == '5min':
                 precompute_vol(cts, VOL_LBS)
                 m5_ref = cts
@@ -341,8 +348,11 @@ def run_chart(csv_paths, out_dir, title_prefix):
             contracts_by_tf.append([])
 
     hour_index, n_hours = build_hour_index(contracts_by_tf)
+    if n_hours == 0:
+        print("  Aucun contrat sur cette période — rien à tracer.", flush=True)
+        return
     days = n_hours / 24
-    print(f"  {n_hours}h ({days:.1f}j)\n", flush=True)
+    print(f"  {n_hours}h ({days:.1f}j)" + (f"  (jour UTC {day})" if day else "") + "\n", flush=True)
 
     # Lookup vol M5 pour la variante dynamique
     lb_h = CFG['vrs_lb']
@@ -398,11 +408,37 @@ def run_chart(csv_paths, out_dir, title_prefix):
 
 
 if __name__ == "__main__":
-    print("\n=== Chart 1 : toute la période ===")
-    run_chart(CSV_FULL, OUT_DIR / "all", "BTC — Full")
+    parser = argparse.ArgumentParser(description="VRS statique vs dynamique (test)")
+    parser.add_argument(
+        "-4d",
+        "--last-4d",
+        action="store_true",
+        dest="last_4d_only",
+        help="Générer uniquement la chart last4d (CSV récent), pas la période full.",
+    )
+    parser.add_argument(
+        "--day",
+        type=str,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Un jour UTC (ce). Sortie vers test/day_*/.",
+    )
+    args = parser.parse_args()
 
-    print("\n=== Chart 2 : 4 derniers jours ===")
-    run_chart(CSV_RECENT, OUT_DIR / "last4d", "BTC — Last 4d")
+    if args.day:
+        d = args.day.strip()
+        sub = OUT_DIR / f"day_{d}"
+        print(f"\n=== Test VRS jour UTC {d} ===", flush=True)
+        run_chart(CSV_FULL, sub, f"BTC — {d}", day=d)
+        print(f"\nOverlay -> {sub / 'overlay_vrs_static_vs_dynamic.png'}")
+    else:
+        if not args.last_4d_only:
+            print("\n=== Chart 1 : toute la période ===")
+            run_chart(CSV_FULL, OUT_DIR / "all", "BTC — Full")
 
-    print(f"\nOverlay full   -> {OUT_DIR / 'all' / 'overlay_vrs_static_vs_dynamic.png'}")
-    print(f"Overlay last4d -> {OUT_DIR / 'last4d' / 'overlay_vrs_static_vs_dynamic.png'}")
+        print("\n=== Chart 2 : 4 derniers jours ===")
+        run_chart(CSV_RECENT, OUT_DIR / "last4d", "BTC — Last 4d")
+
+        if not args.last_4d_only:
+            print(f"\nOverlay full   -> {OUT_DIR / 'all' / 'overlay_vrs_static_vs_dynamic.png'}")
+        print(f"Overlay last4d -> {OUT_DIR / 'last4d' / 'overlay_vrs_static_vs_dynamic.png'}")

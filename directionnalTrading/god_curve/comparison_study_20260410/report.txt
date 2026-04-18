@@ -1,0 +1,39 @@
+======================================================================
+COMPARISON STUDY — Optimizer (OLD) vs God Curve BTC (NEW)
+Généré le : 2026-04-10 21:22
+Sizing : maxDD→$500 pour les deux stratégies
+======================================================================
+
+──── ANCIENNE STRATÉGIE (optimizer) — meilleur par TF ────────────────
+  M5 — tri_02_m5
+    decision_sec=60.0s  dec_vol=1.5x  conf=[3, 1]  conf_vol=0.5x  floor=15  imb=2
+    PnL brut   : $-2324.85  MaxDD brut : $2337.75
+    Scale      : x0.21  →  PnL=$-497  DD=$500
+    RF         : -0.99   WR=56.3%   fills=32344
+
+  M15 — shield_05_m15
+    decision_sec=30.0s  dec_vol=1.0x  conf=[10]  conf_vol=2.5x  floor=40  imb=10
+    PnL brut   : $-3448.65  MaxDD brut : $3448.00
+    Scale      : x0.15  →  PnL=$-500  DD=$500
+    RF         : -1.00   WR=59.0%   fills=43133
+
+  H1 — tri_02_h1
+    decision_sec=60.0s  dec_vol=1.5x  conf=[3, 1]  conf_vol=0.75x  floor=5  imb=4
+    PnL brut   : $-638.80  MaxDD brut : $695.00
+    Scale      : x0.72  →  PnL=$-460  DD=$500
+    RF         : -0.92   WR=50.6%   fills=15033
+
+──── NOUVELLE STRATÉGIE (god_curve BTC) ──────────────────────────────
+  sl=7 int=0 cap=0.75 net1h>$60
+    PnL=$+8860  DD=$500  RF=17.72  WR=95.9%  trades=2073  (52.9/j)
+
+  sl=10 int=0 cap=0.55 vrs1h base=150 g=0.50-1.50
+    PnL=$+6309  DD=$500  RF=12.62  WR=93.1%  trades=3135  (80.0/j)
+
+  sl=3 int=0 cap=0.65 net0.25h>$40
+    PnL=$+6983  DD=$500  RF=13.97  WR=93.7%  trades=4179  (106.7/j)
+
+  sl=2 int=0 cap=0.65 range0.5h>$60
+    PnL=$+6356  DD=$500  RF=12.71  WR=93.2%  trades=7098  (181.2/j)
+
+======================================================================

@@ -66,7 +66,7 @@ for fn in sorted(LIVE_DIR.glob("*.jsonl")):
         except: continue
 
     # Prix de fill : cost total / shares totales depuis window_ended
-    we = next((e for e in events if e.get("event") == "window_ended"), None)
+    we = next((e for e in events if e.get("event") in ("window_ended", "window_settled")), None)
     if we is None:
         continue
     up_s  = we.get("up_shares", 0)

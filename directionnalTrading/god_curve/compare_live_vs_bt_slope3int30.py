@@ -40,7 +40,7 @@ def parse_live_tf(tf_dir):
     for f in sorted(tf_dir.glob("*.jsonl")):
         lines = [json.loads(l) for l in f.read_text(encoding='utf-8').splitlines() if l.strip()]
         ws = next((x for x in lines if x.get('event') == 'window_start'), None)
-        we = next((x for x in lines if x.get('event') == 'window_ended'), None)
+        we = next((x for x in lines if x.get('event') in ('window_ended', 'window_settled')), None)
         if ws is None or we is None:
             continue
 

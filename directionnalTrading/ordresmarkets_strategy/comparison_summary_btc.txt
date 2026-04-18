@@ -1,0 +1,19 @@
+Asset: btc
+Markets covered: 694
+Bot pnl/spent/roi: 11491.43 / 855271.90 / 1.34%
+Candidate pnl/spent/roi: -749.05 / 10977.77 / -6.82%
+Candidate trades: 506
+Candidate trade WR: 45.85%
+
+Derived rules:
+btc|h1|Down: {'require_aligned': True, 'require_recross': True, 'abs_open_pct_min': 0.0758899842257658, 'abs_move_30s_pct_min': 0.01784578269893025, 'ask_c_max': 71.0, 'elapsed_frac_min': 0.3445320555555555, 'elapsed_frac_max': 0.8892828888888888, 'score': 0.017288053341760406, 'precision': 0.11878453038674033, 'recall': 0.021182266009852218, 'predicted_rows': 362, 'buy_rows': 2030, 'entry_size_usd': 14.075}
+btc|h1|Up: {'require_aligned': True, 'require_recross': True, 'abs_open_pct_min': 0.08043177581962885, 'abs_move_30s_pct_min': 0.0148282493798544, 'ask_c_max': 68.0, 'elapsed_frac_min': 0.1956575555555555, 'elapsed_frac_max': 0.8796564583333333, 'score': 0.014538682664203328, 'precision': 0.09430604982206406, 'recall': 0.02376681614349776, 'predicted_rows': 562, 'buy_rows': 2230, 'entry_size_usd': 12.870000000000001}
+btc|m15|Down: {'require_aligned': True, 'require_recross': True, 'abs_open_pct_min': 0.0447013180422323, 'abs_move_30s_pct_min': 0.0117137325136258, 'ask_c_max': 71.0, 'elapsed_frac_min': 0.2343222222222222, 'elapsed_frac_max': 0.9010844444444444, 'score': 0.015399507841887377, 'precision': 0.122568093385214, 'recall': 0.01578551741418191, 'predicted_rows': 514, 'buy_rows': 3991, 'entry_size_usd': 11.2}
+btc|m15|Up: {'require_aligned': True, 'require_recross': True, 'abs_open_pct_min': 0.03930663746377, 'abs_move_30s_pct_min': 0.0113642337306474, 'ask_c_max': 72.0, 'elapsed_frac_min': 0.2209966666666666, 'elapsed_frac_max': 0.9051505555555557, 'score': 0.010768290551484191, 'precision': 0.09534368070953436, 'recall': 0.012755858795609611, 'predicted_rows': 451, 'buy_rows': 3371, 'entry_size_usd': 16.299999999999997}
+btc|m5|Down: {'require_aligned': True, 'require_recross': True, 'abs_open_pct_min': 0.0226361608423938, 'abs_move_30s_pct_min': 0.01372610301061495, 'ask_c_max': 69.0, 'elapsed_frac_min': 0.2431433333333333, 'elapsed_frac_max': 0.9431016666666667, 'score': 0.0367530646324692, 'precision': 0.22838499184339314, 'recall': 0.02589715131335553, 'predicted_rows': 613, 'buy_rows': 5406, 'entry_size_usd': 23.43}
+btc|m5|Up: {'require_aligned': False, 'require_recross': False, 'abs_open_pct_min': 0.02155155269059835, 'abs_move_30s_pct_min': 0.0133754856014104, 'ask_c_max': 69.0, 'elapsed_frac_min': 0.2488733333333333, 'elapsed_frac_max': 0.9473166666666667, 'score': 0.06486926731795885, 'precision': 0.16269598859702708, 'recall': 0.1589733386390768, 'predicted_rows': 4911, 'buy_rows': 5026, 'entry_size_usd': 23.925}
+
+Derived exit policies:
+btc|h1: {'take_profit_c': None, 'stop_loss_c': 6, 'max_hold_s': None, 'mean_pnl_per_100usd': -1.2419972138356619}
+btc|m15: {'take_profit_c': None, 'stop_loss_c': None, 'max_hold_s': None, 'mean_pnl_per_100usd': 2.452818381824854}
+btc|m5: {'take_profit_c': None, 'stop_loss_c': None, 'max_hold_s': None, 'mean_pnl_per_100usd': 4.135430589989966}
